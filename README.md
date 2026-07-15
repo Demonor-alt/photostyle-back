@@ -2,6 +2,8 @@
 
 基于 FastAPI + LangGraph + 通义千问的智能拍照助手后端服务，提供用户认证、图片分析、RAG 检索和智能建议生成等功能。
 
+## 前端地址
+https://github.com/Demonor-alt/photostyle-front
 ## 📋 目录
 
 - [项目简介](#项目简介)
@@ -11,8 +13,7 @@
 - [快速开始](#快速开始)
 - [项目结构](#项目结构)
 - [API 文档](#api-文档)
-- [配置说明](#配置说明)
-- [开发指南](#开发指南)
+
 
 ## 项目简介
 
@@ -46,7 +47,7 @@ PhotoStyle AI Assistant 后端服务是一个智能拍照建议生成系统，�
 
 - ✅ **图片分析**
   - 基于通义千问视觉模型的人脸检测
-  - 人脸特征分析（年龄、性别、表情等）
+  - 人脸特征分析
   - 图片本地存储管理
 
 - ✅ **智能建议生成**
@@ -73,67 +74,27 @@ PhotoStyle AI Assistant 后端服务是一个智能拍照建议生成系统，�
 
 - Python 3.10+
 - MySQL 5.7+ / 8.0+
-- 通义千问 API Key
 
 ## 快速开始
 
-### 1. 克隆项目
-
-```bash
-git clone <repository-url>
-cd back
-```
-
-### 2. 创建虚拟环境
-
-```bash
-python -m venv venv
-
-# Windows
-venv\Scripts\activate
-
-# Linux/Mac
-source venv/bin/activate
-```
-
-### 3. 安装依赖
+### 1. 安装依赖
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. 配置环境变量
+### 2. 配置环境变量
 
-复制 `.env.example` 为 `.env` 并填写配置：
-
-```bash
-cp .env.example .env
 ```
-
-编辑 `.env` 文件：
-
-```env
 # 通义千问 API Key（必填）
 DASHSCOPE_API_KEY=your_qwen_dashscope_api_key
 
 # MySQL 数据库配置
-MYSQL_HOST=127.0.0.1
-MYSQL_PORT=3306
-MYSQL_USER=root
 MYSQL_PASSWORD=your_mysql_password
 MYSQL_DATABASE=photostyle
-MYSQL_POOL_ENABLED=false
-
-# 可选：LangSmith 链路追踪
-# LANGCHAIN_TRACING_V2=true
-# LANGCHAIN_API_KEY=your_langsmith_api_key
-# LANGCHAIN_PROJECT=photostyle
-
-# 可选：调试模式
-# DEBUG=true
 ```
 
-### 5. 初始化数据库
+### 3. 初始化数据库
 
 创建 MySQL 数据库：
 
@@ -143,14 +104,11 @@ CREATE DATABASE photostyle CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 启动服务后会自动创建表结构。
 
-### 6. 启动服务
+### 4. 启动服务
 
 ```bash
 # 开发模式（自动重载）
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-
-# 生产模式
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
 ```
 
 服务启动后访问：
@@ -167,17 +125,14 @@ back/
 │   ├── agents/              # AI Agent 模块
 │   │   ├── evaluation_agent.py    # 评估 Agent
 │   │   ├── rag_agent.py          # RAG 检索 Agent
-│   │   └── __init__.py
 │   ├── api/                 # API 路由
 │   │   ├── routes.py             # 路由定义
-│   │   └── __init__.py
 │   ├── db/                  # 数据库层
 │   │   ├── connection.py         # 数据库连接
 │   │   ├── schema.py             # 表结构定义
 │   │   ├── mysql_repo.py         # 数据仓库
 │   │   ├── user_service.py       # 用户服务
 │   │   ├── history_service.py    # 历史服务
-│   │   └── __init__.py
 │   ├── graph/               # LangGraph 流程编排
 │   ├── rag/                 # RAG 检索模块
 │   ├── services/            # 业务服务
@@ -321,74 +276,3 @@ Content-Type: application/json
 ```http
 GET /api/db/status
 ```
-
-## 配置说明
-
-### 环境变量
-
-| 变量名 | 说明 | 必填 | 默认值 |
-|--------|------|------|--------|
-| `DASHSCOPE_API_KEY` | 通义千问 API Key | 是 | - |
-| `MYSQL_HOST` | MySQL 主机地址 | 是 | 127.0.0.1 |
-| `MYSQL_PORT` | MySQL 端口 | 是 | 3306 |
-| `MYSQL_USER` | MySQL 用户名 | 是 | root |
-| `MYSQL_PASSWORD` | MySQL 密码 | 是 | - |
-| `MYSQL_DATABASE` | 数据库名称 | 是 | photostyle |
-| `MYSQL_POOL_ENABLED` | 启用连接池 | 否 | false |
-| `DEBUG` | 调试模式 | 否 | false |
-| `LANGCHAIN_TRACING_V2` | LangSmith 追踪 | 否 | false |
-| `LANGCHAIN_API_KEY` | LangSmith API Key | 否 | - |
-| `LANGCHAIN_PROJECT` | LangSmith 项目名 | 否 | photostyle |
-
-### 日志配置
-
-日志文件保存在 `logs/app.log`，支持自动轮转。
-
-日志配置可通过环境变量调整：
-- `LOG_LEVEL`: 日志级别（DEBUG/INFO/WARNING/ERROR）
-- `LOG_MAX_BYTES`: 单文件最大字节数
-- `LOG_KEEP_DAYS`: 日志保留天数
-
-## 开发指南
-
-### 添加新的 API 接口
-
-1. 在 `app/models.py` 中定义请求/响应模型
-2. 在 `app/api/routes.py` 中添加路由处理函数
-3. 根据需要在 `app/services/` 中添加业务逻辑
-4. 更新 API 文档
-
-### 自定义 Agent
-
-1. 在 `app/agents/` 目录创建新的 Agent 文件
-2. 实现 Agent 逻辑
-3. 在 `app/graph/` 中将 Agent 集成到 LangGraph 流程
-4. 在 `app/services/orchestrator.py` 中调用
-
-### 数据库迁移
-
-目前使用 SQLAlchemy 自动创建表，生产环境建议使用 Alembic 进行版本管理。
-
-### 测试
-
-```bash
-# 运行单元测试（需要添加测试文件）
-pytest
-
-# 代码格式化
-black app/
-
-# 类型检查
-mypy app/
-```
-
-### 常见问题
-
-**Q: 启动时报 "数据库连接失败"**
-A: 检查 MySQL 服务是否启动，`.env` 配置是否正确，数据库是否已创建。
-
-**Q: 图片上传后提示 "未检测到人脸"**
-A: 确保上传的图片清晰且包含正面人脸，检查 DASHSCOPE_API_KEY 是否有效。
-
-**Q: 流式接口没有输出**
-A: 检查前端是否正确处理 SSE，查看后端日志是否有异常。
