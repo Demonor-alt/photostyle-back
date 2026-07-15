@@ -146,11 +146,12 @@ class MySQLHistoryRepository:  # 定义MySQL历史记录仓储
         cursor.execute(  # 执行插入语句
             self._placeholder_sql(
                 """
-            INSERT INTO photo_style_history (input_data, output_data, liked, shot_success)
-            VALUES (%s, %s, %s, %s)
+            INSERT INTO photo_style_history (user_id, input_data, output_data, liked, shot_success)
+            VALUES (%s, %s, %s, %s, %s)
             """
             ),
             (
+                record["user_id"],  # 用户ID
                 record["input_data"],  # 输入数据
                 record["output_data"],  # 输出数据
                 int(record.get("liked", False)),  # 是否喜欢
@@ -160,10 +161,19 @@ class MySQLHistoryRepository:  # 定义MySQL历史记录仓储
         self.connection.commit()  # 提交事务
         cursor.close()  # 关闭游标
 
+    def update_feedback(self, history_id: int, liked: bool, shot_success: bool) -> None:  # 更新历史记录的反馈
+        cursor = self.connection.cursor()  # 获取游标对象
+        cursor.execute(  # 执行更新语句
+            self._placeholder_sql("UPDATE photo_style_history SET liked = %s, shot_success = %s WHERE id = %s"),
+            (int(liked), int(shot_success), history_id),
+        )
+        self.connection.commit()  # 提交事务
+        cursor.close()  # 关闭游标
+
     def list(self) -> list:  # 查询全部历史记录
         cursor = self.connection.cursor()  # 获取游标对象
         cursor.execute(  # 执行查询语句
-            self._placeholder_sql("SELECT id, input_data, output_data, liked, shot_success, created_at FROM photo_style_history ORDER BY id DESC")
+            self._placeholder_sql("SELECT id, user_id, input_data, output_data, liked, shot_success, created_at FROM photo_style_history ORDER BY id DESC")
         )
         rows = cursor.fetchall()  # 获取结果集
         cursor.close()  # 关闭游标

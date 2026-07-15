@@ -22,11 +22,18 @@ def save_history_record(record: dict) -> None:  # 保存历史记录
     repository = _get_repository()  # 获取仓储
     repository.ensure_schema()  # 确保表结构存在
     repository.save({  # 保存到MySQL
+        "user_id": record["user_id"],  # 用户ID
         "input_data": json.dumps(record["input_data"], ensure_ascii=False),  # 序列化输入
         "output_data": json.dumps(record["output_data"], ensure_ascii=False),  # 序列化输出
         "liked": record.get("liked", False),  # 保存喜欢状态
         "shot_success": record.get("shot_success", False),  # 保存出片状态
     })
+
+
+def update_history_feedback(history_id: int, liked: bool, shot_success: bool) -> None:  # 更新历史记录反馈
+    repository = _get_repository()  # 获取仓储
+    repository.ensure_schema()  # 确保表结构存在
+    repository.update_feedback(history_id, liked, shot_success)  # 更新反馈信息
 
 
 def list_history_records() -> list:  # 查询历史记录
@@ -42,14 +49,16 @@ def list_history_records() -> list:  # 查询历史记录
         else:
             data = {
                 "id": row[0],
-                "input_data": row[1],
-                "output_data": row[2],
-                "liked": row[3],
-                "shot_success": row[4],
-                "created_at": row[5],
+                "user_id": row[1],
+                "input_data": row[2],
+                "output_data": row[3],
+                "liked": row[4],
+                "shot_success": row[5],
+                "created_at": row[6],
             }
         normalized.append({  # 组装返回结构
             "id": data["id"],  # 记录ID
+            "user_id": data["user_id"],  # 用户ID
             "input_data": data["input_data"],  # 输入数据
             "output_data": data["output_data"],  # 输出数据
             "liked": bool(data["liked"]),  # 喜欢状态

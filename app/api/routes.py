@@ -9,7 +9,7 @@ from pydantic import ValidationError  # 引入Pydantic校验异常，便于返�
 
 from app.models import FeedbackRequest, HistoryRecord, LoginRequest, RegisterRequest, SuggestRequest, SuggestResponse, UpdateUserProfileRequest, UserResponse  # 引入请求响应模型
 from app.services.orchestrator import format_sse_event, run_pipeline, stream_pipeline  # 引入调度入口和SSE格式化器
-from app.db.history_service import get_database_status, list_history_records, save_history_record  # 引入历史记录服务
+from app.db.history_service import get_database_status, list_history_records, save_history_record, update_history_feedback  # 引入历史记录服务
 from app.db.user_service import ensure_user, get_user_profile, login_user, upsert_user_photo, update_user_profile  # 引入登录注册服务
 from app.services.qwen_face_client import analyze_image  # 引入Qwen图片分析服务
 
@@ -122,8 +122,17 @@ async def suggest(  # 定义支持表单上传的建议接口
     result = run_pipeline(payload)  # 调用调度流程生成建议
     logger.info("suggest.response=%s", result.model_dump_json())
     try:
+        # 获取用户ID
+        user = get_user_profile(username)
+        # 准备input_data，移除face_analysis和username，清空extra_tags
+        input_data = payload.model_dump()
+        input_data.pop("face_analysis", None)
+        input_data.pop("username", None)
+        input_data["extra_tags"] = []
+        
         save_history_record({
-            "input_data": payload.model_dump(),
+            "user_id": user["id"],
+            "input_data": input_data,
             "output_data": result.model_dump(),
             "liked": False,
             "shot_success": False,
@@ -274,5 +283,7 @@ async def photo_preview(path: str):  # 通过路径读取本地图片
 
 @router.post("/feedback")  # 定义反馈提交接口
 async def submit_feedback(payload: FeedbackRequest) -> dict:  # 接收用户反馈
-    save_history_record(payload.model_dump())  # 当前将反馈也纳入历史存储，方便后续分析
+    if payload.history_id is None:  # 如果没有提供历史记录ID
+        raise HTTPException(status_code=400, detail={"type": "feedback_error", "message": "必须提供 history_id"})
+    update_history_feedback(payload.history_id, payload.liked, payload.shot_success)  # 更新历史记录反馈
     return {"message": "feedback saved", "liked": payload.liked, "shot_success": payload.shot_success}  # 返回保存结果

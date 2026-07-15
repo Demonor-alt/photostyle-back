@@ -25,7 +25,8 @@ class SuggestResponse(BaseModel):  # 定义拍照建议响应模型
 
 
 class HistoryRecord(BaseModel):  # 定义历史记录模型
-    input_data: SuggestRequest  # 输入数据
+    user_id: int  # 用户ID
+    input_data: dict  # 输入数据（不再绑定SuggestRequest）
     output_data: SuggestResponse  # 输出数据
     liked: bool = False  # 用户是否喜欢
     shot_success: bool = False  # 是否出片成功
