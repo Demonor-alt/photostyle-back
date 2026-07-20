@@ -82,21 +82,6 @@ def _normalize_list(value: object) -> list[str]:  # 将任意值规范为字符�
         return [part for part in parts if part]  # 过滤空项
     return []  # 其他类型直接返回空列表
 
-
-def _empty_result() -> dict:  # 构造空的人物特征结果
-    return {  # 返回空结果结构
-        "description": "",  # 人物整体描述
-        "skin": "",  # 肤色特点
-        "facial_sense": "",  # 五官量感
-        "face_shape": "",  # 脸型特点
-        "facial_features": [],  # 五官特点
-        "proportions": [],  # 比例特点
-        "style_keywords": [],  # 风格关键词
-        "has_face": False,  # 是否有人脸
-        "raw": "",  # 原始输出
-    }  # 空结果结束
-
-
 def analyze_image(image_path: str | None, image_base64: str | None = None, image_mime_type: str | None = None) -> dict:  # 调用Qwen分析图片并提取人物特征
     api_key = os.getenv("DASHSCOPE_API_KEY")  # 读取DashScope密钥
     if not api_key:  # 如果没有配置密钥

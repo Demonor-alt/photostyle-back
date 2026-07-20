@@ -63,19 +63,6 @@ class HistoryRecord(BaseSchema):  # 定义历史记录模型
     shot_success: bool = False  # 是否出片成功
 
 
-class FeedbackRequest(BaseSchema):  # 定义用户反馈请求模型
-    history_id: Optional[int] = None  # 历史记录ID
-    liked: bool = False  # 用户是否喜欢
-    shot_success: bool = False  # 是否出片成功
-    comment: Optional[str] = None  # 用户补充评论
-
-
-class FeedbackResponse(BaseSchema):  # 定义用户反馈响应模型
-    message: str  # 提示信息
-    liked: bool  # 用户是否喜欢
-    shot_success: bool  # 是否出片成功
-
-
 class DatabaseStatusResponse(BaseSchema):  # 定义数据库状态响应模型
     connected: bool  # 是否已连接
     message: str  # 状态信息
@@ -115,8 +102,3 @@ class GetHistoryApiResponse(BaseSchema):  # /history GET 接口响应
     message: str = "历史记录查询成功"
     data: HistoryListResponse
 
-
-class FeedbackApiResponse(BaseSchema):  # /feedback 接口响应
-    success: bool = True
-    message: str = "反馈提交成功"
-    data: FeedbackResponse

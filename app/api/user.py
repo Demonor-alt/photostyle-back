@@ -49,7 +49,6 @@ router = APIRouter()  # 创建路由实例
 async def upload_photo(
     form: UploadPhotoFormParams = Depends(),
 ) -> UploadPhotoApiResponse:
-    username = form.username
     image = form.image
     if not image.content_type or not image.content_type.startswith("image/"):
         raise UploadError("只支持图片文件上传")
@@ -57,7 +56,7 @@ async def upload_photo(
     try:
         face_analysis = analyze_image(image_path=image_path, image_mime_type=image_mime_type)
         # 只有检测到人脸时才把照片写入数据库，避免无效照片污染用户资料
-        user = upsert_user_photo(username, image_path, image_mime_type, face_analysis)
+        user = upsert_user_photo(form.username, image_path, image_mime_type, face_analysis)
     except ValueError as exc:
         if image_path:
             try:
