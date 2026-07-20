@@ -1,5 +1,5 @@
-import logging  # 引入logging用于统一日志输出
-import os  # 引入os用于读取环境变量
+import logging
+import os
 from logging.handlers import TimedRotatingFileHandler  # 引入按时间滚动的日志处理器
 from pathlib import Path  # 引入Path用于处理日志文件路径
 
@@ -13,7 +13,7 @@ LOG_DIR = Path(os.getenv("LOG_DIR", Path(__file__).resolve().parents[2] / "logs"
 LOG_DIR.mkdir(parents=True, exist_ok=True)  # 确保日志目录存在
 LOG_LEVEL_NAME = os.getenv("LOG_LEVEL", "INFO").strip().upper()  # 读取日志级别名称
 LOG_LEVEL = getattr(logging, LOG_LEVEL_NAME, logging.INFO)  # 将日志级别名称转换为数值级别
-LOG_KEEP_DAYS = int(os.getenv("LOG_KEEP_DAYS", "7"))  # 读取日志保留天数
+LOG_KEEP_DAYS = int(os.getenv("LOG_KEEP_DAYS", "3"))  # 读取日志保留天数
 LOG_MAX_BYTES = int(os.getenv("LOG_MAX_BYTES", str(10 * 1024 * 1024)))  # 读取单个日志文件最大字节数
 
 logger = logging.getLogger("photostyle")  # 创建应用日志器

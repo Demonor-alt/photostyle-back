@@ -1,11 +1,11 @@
-import os  # 引入os用于读取环境变量
-from fastapi import FastAPI, Request  # 引入FastAPI用于构建后端服务并接收请求对象
-from fastapi.exceptions import RequestValidationError  # 引入请求校验异常
-from fastapi.middleware.cors import CORSMiddleware  # 引入CORS中间件允许跨域请求
-from fastapi.responses import JSONResponse  # 引入JSON响应用于统一错误格式
+import os
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError  # 请求校验异常
+from fastapi.middleware.cors import CORSMiddleware  # 跨域请求
+from fastapi.responses import JSONResponse  # JSON响应
 
-from app.api.routes import router as api_router  # 引入API路由聚合
-from app.utils.runtime import DEBUG_ENABLED, LOG_KEEP_DAYS, LOG_LEVEL_NAME, LOG_MAX_BYTES, logger  # 引入统一运行时配置
+from app.api.routes import router as api_router  # 路由
+from app.utils.runtime import DEBUG_ENABLED, LOG_KEEP_DAYS, LOG_LEVEL_NAME, LOG_MAX_BYTES, logger  # 日志
 
 
 app = FastAPI(title="PhotoStyle AI Assistant", version="0.1.0")  # 创建FastAPI应用实例并设置标题与版本
