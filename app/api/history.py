@@ -1,9 +1,7 @@
-import json  # 引入json用于解析表单中的标签数据与构造SSE数据
+import json  # 引入json用于构造SSE数据
 import logging  # 引入logging用于记录接口调用信息
-from pathlib import Path  # 引入Path用于处理临时文件保存路径
-from uuid import uuid4  # 引入uuid用于生成临时文件名
 
-from fastapi import APIRouter, Depends, UploadFile  # 引入路由与依赖注入能力
+from fastapi import APIRouter, Depends  # 引入路由与依赖注入能力
 from fastapi.responses import StreamingResponse  # 引入流式响应
 
 from app.schemas.history import (
@@ -33,31 +31,11 @@ from app.db.history_service import (
     update_history_feedback,
 )
 from app.db.user_service import get_user_profile  # 引入用户查询服务
+from app.api.utils import save_upload_file, parse_tag_list  # 引入工具函数
 
 logger = logging.getLogger(__name__)  # 创建路由模块日志器
 
 router = APIRouter()  # 创建路由实例
-
-
-def _save_upload_file(upload: UploadFile) -> tuple[str, str]:  # 保存上传文件到本地临时目录
-    suffix = Path(upload.filename or "image.jpg").suffix or ".jpg"  # 获取文件后缀
-    target_dir = Path(__file__).resolve().parents[2] / "uploads"  # 定位临时目录
-    target_dir.mkdir(parents=True, exist_ok=True)  # 如果目录不存在则创建
-    target_path = target_dir / f"{uuid4().hex}{suffix}"  # 生成唯一文件名
-    content = upload.file.read()  # 读取上传文件内容
-    target_path.write_bytes(content)  # 写入本地文件
-    mime_type = upload.content_type or "image/jpeg"  # 记录MIME类型
-    return str(target_path), mime_type  # 返回文件路径和MIME类型
-
-
-def _parse_tag_list(raw_value: str) -> list[str]:  # 解析前端传来的JSON标签字符串
-    try:  # 尝试正常解析
-        value = json.loads(raw_value)  # 将JSON字符串转换为列表
-        if isinstance(value, list):  # 如果结果是列表
-            return [str(item).strip() for item in value if str(item).strip()]  # 规范成字符串列表
-        raise ValueError("标签字段必须是 JSON 数组")  # 直接暴露格式错误
-    except Exception as exc:  # 如果解析失败
-        raise ValueError(f"标签字段解析失败: {raw_value}") from exc  # 不再静默吞掉异常
 
 
 @router.post("/suggest", response_model=SuggestApiResponse)  # 定义建议生成接口
@@ -67,7 +45,7 @@ async def suggest(  # 定义支持表单上传的建议接口
     image_path = None  # 初始化图片路径
     image_mime_type = None  # 初始化图片MIME类型
     if form.image is not None:  # 如果前端上传了文件
-        image_path, image_mime_type = _save_upload_file(form.image)  # 保存图片到本地
+        image_path, image_mime_type = save_upload_file(form.image)  # 保存图片到本地
     payload = SuggestRequest(  # 组装请求模型
         username=form.username,  # 传入用户名
         image_path=image_path,  # 传入图片路径
@@ -76,10 +54,10 @@ async def suggest(  # 定义支持表单上传的建议接口
         location=form.location,  # 传入地点
         time=form.time,  # 传入时间
         weather=form.weather,  # 传入天气
-        face_tags=_parse_tag_list(form.face_tags),  # 解析人脸标签
-        shot_tags=_parse_tag_list(form.shot_tags),  # 解析画幅标签
-        pose_tags=_parse_tag_list(form.pose_tags),  # 解析姿势标签
-        extra_tags=_parse_tag_list(form.extra_tags),  # 解析全部附加选择项
+        face_tags=parse_tag_list(form.face_tags),  # 解析人脸标签
+        shot_tags=parse_tag_list(form.shot_tags),  # 解析画幅标签
+        pose_tags=parse_tag_list(form.pose_tags),  # 解析姿势标签
+        extra_tags=parse_tag_list(form.extra_tags),  # 解析全部附加选择项
     )  # 请求组装结束
     logger.info("suggest.request=%s", payload.model_dump_json())
     result = run_pipeline(payload)  # 调用调度流程生成建议
@@ -114,7 +92,7 @@ async def suggest_stream(  # 定义SSE流式接口
     image_path = None  # 初始化图片路径
     image_mime_type = None  # 初始化图片MIME类型
     if form.image is not None:  # 如果前端上传了文件
-        image_path, image_mime_type = _save_upload_file(form.image)  # 保存图片到本地
+        image_path, image_mime_type = save_upload_file(form.image)  # 保存图片到本地
     payload = SuggestRequest(  # 组装请求模型
         username=form.username,  # 传入用户名
         image_path=image_path,  # 传入图片路径
@@ -123,10 +101,10 @@ async def suggest_stream(  # 定义SSE流式接口
         location=form.location,  # 传入地点
         time=form.time,  # 传入时间
         weather=form.weather,  # 传入天气
-        face_tags=_parse_tag_list(form.face_tags),  # 解析人脸标签
-        shot_tags=_parse_tag_list(form.shot_tags),  # 解析画幅标签
-        pose_tags=_parse_tag_list(form.pose_tags),  # 解析姿势标签
-        extra_tags=_parse_tag_list(form.extra_tags),  # 解析全部附加选择项
+        face_tags=parse_tag_list(form.face_tags),  # 解析人脸标签
+        shot_tags=parse_tag_list(form.shot_tags),  # 解析画幅标签
+        pose_tags=parse_tag_list(form.pose_tags),  # 解析姿势标签
+        extra_tags=parse_tag_list(form.extra_tags),  # 解析全部附加选择项
     )  # 请求组装结束
     logger.info("suggest.stream.request=%s", payload.model_dump_json(ensure_ascii=False))
 

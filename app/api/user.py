@@ -1,8 +1,7 @@
 import logging  # 引入logging用于记录接口调用信息
 from pathlib import Path  # 引入Path用于处理临时文件保存路径
-from uuid import uuid4  # 引入uuid用于生成临时文件名
 
-from fastapi import APIRouter, Depends, UploadFile  # 引入路由与依赖注入能力
+from fastapi import APIRouter, Depends  # 引入路由与依赖注入能力
 from fastapi.responses import FileResponse  # 引入文件响应
 from pydantic import ValidationError  # 引入Pydantic校验异常
 
@@ -39,21 +38,11 @@ from app.db.user_service import (
     update_user_profile,
 )
 from app.services.qwen_face_client import analyze_image  # 引入Qwen图片分析服务
+from app.api.utils import save_upload_file  # 引入文件上传工具函数
 
 logger = logging.getLogger(__name__)  # 创建路由模块日志器
 
 router = APIRouter()  # 创建路由实例
-
-
-def _save_upload_file(upload: UploadFile) -> tuple[str, str]:  # 保存上传文件到本地临时目录
-    suffix = Path(upload.filename or "image.jpg").suffix or ".jpg"  # 获取文件后缀
-    target_dir = Path(__file__).resolve().parents[2] / "uploads"  # 定位临时目录
-    target_dir.mkdir(parents=True, exist_ok=True)  # 如果目录不存在则创建
-    target_path = target_dir / f"{uuid4().hex}{suffix}"  # 生成唯一文件名
-    content = upload.file.read()  # 读取上传文件内容
-    target_path.write_bytes(content)  # 写入本地文件
-    mime_type = upload.content_type or "image/jpeg"  # 记录MIME类型
-    return str(target_path), mime_type  # 返回文件路径和MIME类型
 
 
 @router.post("/photos/upload", response_model=UploadPhotoApiResponse)
@@ -64,7 +53,7 @@ async def upload_photo(
     image = form.image
     if not image.content_type or not image.content_type.startswith("image/"):
         raise UploadError("只支持图片文件上传")
-    image_path, image_mime_type = _save_upload_file(image)
+    image_path, image_mime_type = save_upload_file(image)
     try:
         face_analysis = analyze_image(image_path=image_path, image_mime_type=image_mime_type)
         # 只有检测到人脸时才把照片写入数据库，避免无效照片污染用户资料
