@@ -29,9 +29,10 @@ PhotoStyle AI Assistant 后端服务是一个智能拍照建议生成系统，�
   - DashScope (通义千问) 1.24.0
   - OpenAI SDK 1.61.0
 - **数据库**: 
-  - SQLAlchemy 2.0.34
-  - PyMySQL 1.1.1
-  - MySQL
+  - SQLAlchemy 2.0.34 (ORM)
+  - PyMySQL 1.1.1 (MySQL 驱动)
+  - psycopg2-binary 2.9.10 (PostgreSQL 驱动)
+  - 支持 PostgreSQL / MySQL
 - **安全**: 
   - Passlib[bcrypt] 1.7.4
   - Cryptography 43.0.1
@@ -74,7 +75,7 @@ PhotoStyle AI Assistant 后端服务是一个智能拍照建议生成系统，�
 ## 环境要求
 
 - Python 3.10+
-- MySQL 5.7+ / 8.0+
+- PostgreSQL 12+ 或 MySQL 5.7+
 
 ## 快速开始
 
@@ -86,24 +87,51 @@ pip install -r requirements.txt
 
 ### 2. 配置环境变量
 
+复制 `.env.example` 为 `.env` 并配置：
+
+```bash
+cp .env.example .env
+```
+
+编辑 `.env` 文件：
+
 ```
 # 通义千问 API Key（必填）
 DASHSCOPE_API_KEY=your_qwen_dashscope_api_key
 
-# MySQL 数据库配置
-MYSQL_PASSWORD=your_mysql_password
-MYSQL_DATABASE=photostyle
+# 数据库配置（二选一）
+# PostgreSQL (推荐)
+DATABASE_URL=postgresql://user:password@localhost:5432/photostyle
+
+# MySQL
+# DATABASE_URL=mysql+pymysql://root:password@localhost:3306/photostyle
 ```
 
 ### 3. 初始化数据库
 
-创建 MySQL 数据库：
+#### PostgreSQL
+
+```bash
+# 创建数据库
+createdb photostyle
+
+# 或使用 psql
+psql -U postgres
+CREATE DATABASE photostyle;
+\q
+```
+
+#### MySQL
 
 ```sql
 CREATE DATABASE photostyle CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-启动服务后会自动创建表结构。
+#### 运行迁移脚本
+
+```bash
+python migrate_to_orm.py
+```
 
 ### 4. 启动服务
 
@@ -125,26 +153,23 @@ back/
 ├── app/
 │   ├── agents/              # AI Agent 模块
 │   │   ├── evaluation_agent.py    # 评估 Agent
-│   │   ├── rag_agent.py          # RAG 检索 Agent
+│   │   └── rag_agent.py          # RAG 检索 Agent
 │   ├── api/                 # API 路由
-│   │   ├── routes.py             # 路由定义
 │   ├── db/                  # 数据库层
-│   │   ├── connection.py         # 数据库连接
-│   │   ├── schema.py             # 表结构定义
-│   │   ├── mysql_repo.py         # 数据仓库
+│   │   ├── database.py           # 数据库连接和会话
 │   │   ├── user_service.py       # 用户服务
-│   │   ├── history_service.py    # 历史服务
+│   │   └── history_service.py    # 历史服务
+│   ├── models/              # ORM 模型
+│   │   ├── user.py               # 用户模型
+│   │   └── history.py            # 历史记录模型
 │   ├── graph/               # LangGraph 流程编排
 │   ├── rag/                 # RAG 检索模块
 │   ├── services/            # 业务服务
-│   │   ├── orchestrator.py       # 流程调度器
-│   │   └── qwen_face_client.py   # 通义千问客户端
 │   ├── utils/               # 工具模块
-│   │   └── runtime.py            # 运行时配置
-│   ├── main.py              # FastAPI 应用入口
-│   └── models.py            # Pydantic 数据模型
+│   └── main.py              # FastAPI 应用入口
 ├── logs/                    # 日志目录
 ├── uploads/                 # 上传文件目录
+├── migrate_to_orm.py        # 数据库迁移脚本
 ├── .env.example             # 环境变量示例
 ├── requirements.txt         # Python 依赖
 └── README.md               # 本文件

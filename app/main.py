@@ -7,9 +7,13 @@ from fastapi.responses import JSONResponse  # JSON响应
 from app.api.user import router as user_router  # 用户路由
 from app.api.history import router as history_router  # 历史记录路由
 from app.utils.runtime import DEBUG_ENABLED, LOG_KEEP_DAYS, LOG_LEVEL_NAME, LOG_MAX_BYTES, logger  # 日志
+from app.db import init_db  # 数据库初始化
 
 
 app = FastAPI(title="PhotoStyle AI Assistant", version="0.1.0")  # 创建FastAPI应用实例并设置标题与版本
+
+# 初始化数据库表结构
+init_db()
 app.add_middleware(  # 注册CORS中间件
     CORSMiddleware,  # 使用FastAPI官方CORS中间件
     allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],  # 允许前端Vite开发地址

@@ -1,39 +1,31 @@
-from datetime import datetime  # 引入datetime用于时间戳
-from typing import Optional  # 引入类型标注
+"""用户模型定义"""
+from datetime import datetime
+from sqlalchemy import Column, BigInteger, String, Text, JSON, DateTime
+from app.db.database import Base
 
 
-class User:  # 定义用户ORM模型
-    """用户数据库模型"""
-    
-    def __init__(
-        self,
-        id: int,
-        username: str,
-        password: str,
-        photo_path: Optional[str] = None,
-        photo_mime_type: Optional[str] = None,
-        face_analysis: Optional[dict] = None,
-        created_at: Optional[datetime] = None,
-        updated_at: Optional[datetime] = None,
-    ):
-        self.id = id  # 用户ID
-        self.username = username  # 用户名
-        self.password = password  # 密码（已加密）
-        self.photo_path = photo_path  # 图片路径
-        self.photo_mime_type = photo_mime_type  # 图片类型
-        self.face_analysis = face_analysis  # 人脸分析结果
-        self.created_at = created_at  # 创建时间
-        self.updated_at = updated_at  # 更新时间
-    
-    def to_dict(self) -> dict:
-        """转换为字典格式"""
+class User(Base):
+    """用户表模型"""
+    __tablename__ = "photo_style_users"
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True, comment="用户ID")
+    username = Column(String(64), unique=True, nullable=False, index=True, comment="用户名")
+    password_hash = Column(String(255), nullable=False, comment="密码哈希")
+    photo_path = Column(String(500), nullable=True, comment="用户照片路径")
+    photo_mime_type = Column(String(100), nullable=True, comment="照片MIME类型")
+    face_analysis = Column(JSON, nullable=True, comment="人脸分析数据")
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow, comment="创建时间")
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间")
+
+    def to_dict(self):
+        """转换为字典"""
         return {
             "id": self.id,
             "username": self.username,
-            "password": self.password,
+            "password_hash": self.password_hash,
             "photo_path": self.photo_path,
             "photo_mime_type": self.photo_mime_type,
             "face_analysis": self.face_analysis,
-            "created_at": self.created_at,
-            "updated_at": self.updated_at,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
