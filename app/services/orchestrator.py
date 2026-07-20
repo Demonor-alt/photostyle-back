@@ -16,12 +16,12 @@ def run_pipeline(payload: SuggestRequest) -> SuggestResponse:  # 运行完整调
     return SuggestResponse(**suggestion)  # 转换为响应模型
 
 
-def stream_pipeline(payload: SuggestRequest):  # 运行流式调度流程
-    workflow = build_workflow()  # 构建LangGraph工作流
-    if workflow is None:  # 如果当前环境未安装LangGraph
-        raise RuntimeError("LangGraph 未安装，无法运行流式建议生成流程")  # 直接暴露运行环境问题
-    for chunk in workflow.stream({"request": payload}):  # 以流式方式输出每个步骤结果
-        yield chunk  # 向外部逐步返回
+# def stream_pipeline(payload: SuggestRequest):  # 运行流式调度流程
+#     workflow = build_workflow()  # 构建LangGraph工作流
+#     if workflow is None:  # 如果当前环境未安装LangGraph
+#         raise RuntimeError("LangGraph 未安装，无法运行流式建议生成流程")  # 直接暴露运行环境问题
+#     for chunk in workflow.stream({"request": payload}):  # 以流式方式输出每个步骤结果
+#         yield chunk  # 向外部逐步返回
 
 
 def _to_json_safe(value: Any) -> Any:  # 将任意对象转换为可JSON序列化结构

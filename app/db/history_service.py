@@ -1,4 +1,3 @@
-"""历史记录服务层 - 使用 ORM"""
 import os
 from sqlalchemy import text
 from sqlalchemy.orm import Session

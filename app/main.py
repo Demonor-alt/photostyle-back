@@ -1,4 +1,16 @@
 import os
+import sys
+from pathlib import Path
+from dotenv import load_dotenv
+
+# 加载环境变量（必须在其他导入之前）
+root_dir = Path(__file__).parent.parent
+env_path = root_dir / ".env"
+load_dotenv(dotenv_path=env_path)
+
+# 将项目根目录添加到 Python 路径
+sys.path.insert(0, str(root_dir))
+
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError  # 请求校验异常
 from fastapi.middleware.cors import CORSMiddleware  # 跨域请求
@@ -73,3 +85,8 @@ async def unexpected_error_handler(request: Request, exc: Exception) -> JSONResp
 @app.get("/")  # 定义健康检查接口
 async def root() -> dict:  # 声明根路径返回字典
     return {"message": "PhotoStyle AI Assistant backend is running."}  # 返回服务运行状态
+
+
+if __name__ == "__main__":  # 如果作为主程序运行
+    import uvicorn  # 引入uvicorn服务器
+    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)  # 启动服务器，支持热重载

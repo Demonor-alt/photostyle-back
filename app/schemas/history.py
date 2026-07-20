@@ -49,16 +49,17 @@ class SuggestRequest(BaseSchema):  # 定义拍照建议请求模型
 
 
 class SuggestResponse(BaseSchema):  # 定义拍照建议响应模型
-    outfit: List[str]  # 穿搭建议列表
-    makeup: List[str]  # 妆容建议列表
-    poses: List[str]  # 姿势建议列表
-    summary: str  # 整体总结
+    suggestions: Optional[str] = None  # 旧格式：建议文本（兼容）
+    outfit: Optional[List[str]] = None  # 穿搭建议列表（新格式）
+    makeup: Optional[List[str]] = None  # 妆容建议列表（新格式）
+    poses: Optional[List[str]] = None  # 姿势建议列表（新格式）
+    summary: Optional[str] = None  # 整体总结（新格式）
 
 
 class HistoryRecord(BaseSchema):  # 定义历史记录模型
     user_id: int  # 用户ID
     input_data: dict  # 输入数据（不再绑定SuggestRequest）
-    output_data: SuggestResponse  # 输出数据
+    output_data: dict  # 输出数据（支持旧格式和新格式）
     liked: bool = False  # 用户是否喜欢
     shot_success: bool = False  # 是否出片成功
 

@@ -136,8 +136,8 @@ python migrate_to_orm.py
 ### 4. 启动服务
 
 ```bash
-# 开发模式（自动重载）
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+# 开发模式
+python app/main.py
 ```
 
 服务启动后访问：

@@ -20,7 +20,7 @@ from app.schemas.error import (
     FeedbackError,
     HistorySaveError,
 )
-from app.services.orchestrator import format_sse_event, run_pipeline, stream_pipeline  # 引入调度入口和SSE格式化器
+from app.services.orchestrator import format_sse_event, run_pipeline  # 引入调度入口和SSE格式化器
 from app.db.history_service import (
     get_database_status,
     list_history_records,
@@ -140,11 +140,7 @@ async def create_history(record: HistoryRecord) -> CreateHistoryApiResponse:  # 
 
 
 @router.get("/history", response_model=GetHistoryApiResponse)  # 定义历史记录查询接口
-async def get_history(username: str | None = None) -> GetHistoryApiResponse:  # 获取历史记录列表，支持按用户名筛选
-    user_id = None
-    if username:  # 如果提供了用户名
-        user = get_user_profile(username)  # 获取用户信息
-        user_id = user["id"]  # 提取用户ID
+async def get_history(user_id: int | None = None) -> GetHistoryApiResponse:  # 获取历史记录列表，支持按用户ID筛选
     items = list_history_records(user_id=user_id)  # 按用户ID筛选历史记录
     return GetHistoryApiResponse(
         data=HistoryListResponse(items=items)

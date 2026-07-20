@@ -3,7 +3,6 @@ from pathlib import Path  # 引入Path用于处理临时文件保存路径
 
 from fastapi import APIRouter, Depends  # 引入路由与依赖注入能力
 from fastapi.responses import FileResponse  # 引入文件响应
-from pydantic import ValidationError  # 引入Pydantic校验异常
 
 from app.schemas.base import ApiResponse  # 引入统一响应模型
 from app.schemas.error import (
@@ -67,13 +66,6 @@ async def upload_photo(
         if error_message == "图片未检测到人脸":
             raise FaceNotDetectedError() from exc
         raise UploadError(error_message) from exc
-    except ConnectionError as exc:
-        if image_path:
-            try:
-                Path(image_path).unlink(missing_ok=True)
-            except Exception:
-                pass
-        raise DatabaseUnavailableError("上传暂时不可用：数据库连接失败，请稍后重试", hint=str(exc)) from exc
     except Exception as exc:
         if image_path:
             try:
@@ -97,16 +89,8 @@ async def register_user(payload: RegisterRequest) -> RegisterApiResponse:  # 接
     try:
         user = ensure_user(payload.username, payload.password)  # 创建或获取用户
         return RegisterApiResponse(data=UserResponse(**user))
-    except ValidationError as exc:
-        from fastapi import HTTPException
-        raise HTTPException(status_code=422, detail=exc.errors()) from exc
     except ValueError as exc:
         raise RegisterError(str(exc)) from exc
-    except ConnectionError as exc:
-        raise DatabaseUnavailableError(
-            "注册暂时不可用：数据库连接失败，请检查 MySQL 配置和数据库是否已创建",
-            hint=str(exc)
-        ) from exc
     except Exception as exc:
         raise RegisterUnknownError(hint=str(exc)) from exc
 
@@ -116,9 +100,6 @@ async def login(payload: LoginRequest) -> LoginApiResponse:  # 接收登录请�
     try:
         user = login_user(payload.username, payload.password)  # 校验用户名密码
         return LoginApiResponse(data=UserResponse(**user))
-    except ValidationError as exc:
-        from fastapi import HTTPException
-        raise HTTPException(status_code=422, detail=exc.errors()) from exc
     except ValueError as exc:
         message = str(exc)
         if message == "用户名或密码错误":

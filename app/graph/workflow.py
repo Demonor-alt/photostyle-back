@@ -1,8 +1,10 @@
 try:  # 尝试导入LangGraph
     from langgraph.graph import StateGraph, END  # 引入LangGraph状态图
+    from langgraph.checkpoint.memory import MemorySaver  # 引入内存检查点
 except Exception:  # 如果当前环境未安装依赖
     StateGraph = None  # 降级为空
     END = None  # 降级为空
+    MemorySaver = None  # 降级为空
 
 from app.graph.state import PhotoStyleState  # 引入状态类型
 from app.graph.nodes import retrieval_node, generation_node, evaluation_node  # 引入节点函数
