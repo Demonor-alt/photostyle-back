@@ -4,7 +4,8 @@ from fastapi.exceptions import RequestValidationError  # 请求校验异常
 from fastapi.middleware.cors import CORSMiddleware  # 跨域请求
 from fastapi.responses import JSONResponse  # JSON响应
 
-from app.api.routes import router as api_router  # 路由
+from app.api.user import router as user_router  # 用户路由
+from app.api.history import router as history_router  # 历史记录路由
 from app.utils.runtime import DEBUG_ENABLED, LOG_KEEP_DAYS, LOG_LEVEL_NAME, LOG_MAX_BYTES, logger  # 日志
 
 
@@ -16,7 +17,8 @@ app.add_middleware(  # 注册CORS中间件
     allow_methods=["*"],  # 允许所有HTTP方法
     allow_headers=["*"],  # 允许所有请求头
 )  # CORS配置结束
-app.include_router(api_router, prefix="/api")  # 挂载业务API路由
+app.include_router(user_router, prefix="/api")  # 挂载用户API路由
+app.include_router(history_router, prefix="/api")  # 挂载历史记录API路由
 
 
 def _error_payload(exc: Exception, path: str, detail: str | None = None) -> dict:  # 构造统一错误响应体

@@ -5,7 +5,7 @@ import os  # 引入os用于读取环境变量中的API密钥
 from dashscope import Generation  # 引入DashScope生成接口
 import dashscope  # 引入DashScope配置对象
 
-from app.models import SuggestRequest, SuggestResponse  # 引入请求响应模型
+from app.schemas.history import SuggestRequest, SuggestResponse  # 引入请求响应模型
 from app.rag.retriever import retrieve_context  # 引入RAG检索函数
 
 

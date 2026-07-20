@@ -36,10 +36,10 @@ def update_history_feedback(history_id: int, liked: bool, shot_success: bool) ->
     repository.update_feedback(history_id, liked, shot_success)  # 更新反馈信息
 
 
-def list_history_records() -> list:  # 查询历史记录
+def list_history_records(user_id: int | None = None) -> list:  # 查询历史记录，支持按用户ID筛选
     repository = _get_repository()  # 获取仓储
     repository.ensure_schema()  # 确保表结构存在
-    rows = repository.list()  # 查询结果
+    rows = repository.list(user_id=user_id)  # 查询结果
     normalized = []  # 初始化标准化列表
     for row in rows:  # 遍历数据库结果
         if isinstance(row, dict):
@@ -56,11 +56,19 @@ def list_history_records() -> list:  # 查询历史记录
                 "shot_success": row[5],
                 "created_at": row[6],
             }
+        # 解析JSON字符串为字典
+        input_data = data["input_data"]
+        if isinstance(input_data, str):
+            input_data = json.loads(input_data)
+        output_data = data["output_data"]
+        if isinstance(output_data, str):
+            output_data = json.loads(output_data)
+        
         normalized.append({  # 组装返回结构
             "id": data["id"],  # 记录ID
             "user_id": data["user_id"],  # 用户ID
-            "input_data": data["input_data"],  # 输入数据
-            "output_data": data["output_data"],  # 输出数据
+            "input_data": input_data,  # 输入数据（已解析）
+            "output_data": output_data,  # 输出数据（已解析）
             "liked": bool(data["liked"]),  # 喜欢状态
             "shot_success": bool(data["shot_success"]),  # 出片状态
             "created_at": str(data["created_at"]),  # 创建时间

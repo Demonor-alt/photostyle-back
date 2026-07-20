@@ -2,7 +2,7 @@ import json  # 引入json用于序列化流式数据
 from typing import Any  # 引入Any用于标注通用JSON对象
 
 from app.graph import build_workflow  # 引入工作流构建函数
-from app.models import SuggestRequest, SuggestResponse  # 引入模型
+from app.schemas.history import SuggestRequest, SuggestResponse  # 引入模型
 
 
 def run_pipeline(payload: SuggestRequest) -> SuggestResponse:  # 运行完整调度流程

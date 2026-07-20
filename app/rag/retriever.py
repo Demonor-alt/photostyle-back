@@ -1,7 +1,7 @@
 import json  # 引入JSON模块用于读取种子数据
 from pathlib import Path  # 引入Path用于处理文件路径
 
-from app.models import SuggestRequest  # 引入请求模型
+from app.schemas.history import SuggestRequest  # 引入请求模型
 
 
 def _load_seed_items() -> list:  # 加载种子条目

@@ -1,0 +1,122 @@
+from typing import List, Optional  # 引入类型标注用于描述字段结构
+
+from fastapi import File, Form, UploadFile  # 引入FastAPI表单和文件处理
+from pydantic import Field  # 引入Field用于定义字段默认值
+from typing_extensions import Annotated  # 引入Annotated用于类型标注
+
+from .base import BaseSchema  # 引入公共Schema基类
+
+
+class SuggestFormParams:  # 定义建议生成表单参数（用于FastAPI依赖注入）
+    def __init__(
+        self,
+        username: Annotated[str, Form(description="用户名")],
+        style: Annotated[str, Form(description="风格")],
+        location: Annotated[str | None, Form(description="地点")] = None,
+        time: Annotated[str | None, Form(description="时间")] = None,
+        weather: Annotated[str | None, Form(description="天气")] = None,
+        face_tags: Annotated[str, Form(description="人脸标签JSON字符串")] = "[]",
+        shot_tags: Annotated[str, Form(description="画幅标签JSON字符串")] = "[]",
+        pose_tags: Annotated[str, Form(description="姿势标签JSON字符串")] = "[]",
+        extra_tags: Annotated[str, Form(description="前端全部选择项")] = "[]",
+        image: Annotated[UploadFile | None, File(description="上传图片文件")] = None,
+    ):
+        self.username = username
+        self.style = style
+        self.location = location
+        self.time = time
+        self.weather = weather
+        self.face_tags = face_tags
+        self.shot_tags = shot_tags
+        self.pose_tags = pose_tags
+        self.extra_tags = extra_tags
+        self.image = image
+
+
+class SuggestRequest(BaseSchema):  # 定义拍照建议请求模型
+    username: str  # 当前登录用户名
+    style: str  # 用户选择的风格
+    location: Optional[str] = None  # 拍照地点
+    time: Optional[str] = None  # 拍照时间
+    weather: Optional[str] = None  # 拍照天气
+    face_tags: List[str] = Field(default_factory=list)  # 人脸标签，可多选
+    shot_tags: List[str] = Field(default_factory=list)  # 构图标签，可多选
+    pose_tags: List[str] = Field(default_factory=list)  # 姿势标签，可多选
+    extra_tags: List[str] = Field(default_factory=list)  # 额外选择项，便于前端一次性上传全部选项
+    image_path: Optional[str] = None  # 图片路径
+    image_mime_type: Optional[str] = None  # 图片MIME类型
+    face_analysis: Optional[dict] = None  # 可选的人脸分析结果，后端会优先从数据库获取
+
+
+class SuggestResponse(BaseSchema):  # 定义拍照建议响应模型
+    outfit: List[str]  # 穿搭建议列表
+    makeup: List[str]  # 妆容建议列表
+    poses: List[str]  # 姿势建议列表
+    summary: str  # 整体总结
+
+
+class HistoryRecord(BaseSchema):  # 定义历史记录模型
+    user_id: int  # 用户ID
+    input_data: dict  # 输入数据（不再绑定SuggestRequest）
+    output_data: SuggestResponse  # 输出数据
+    liked: bool = False  # 用户是否喜欢
+    shot_success: bool = False  # 是否出片成功
+
+
+class FeedbackRequest(BaseSchema):  # 定义用户反馈请求模型
+    history_id: Optional[int] = None  # 历史记录ID
+    liked: bool = False  # 用户是否喜欢
+    shot_success: bool = False  # 是否出片成功
+    comment: Optional[str] = None  # 用户补充评论
+
+
+class FeedbackResponse(BaseSchema):  # 定义用户反馈响应模型
+    message: str  # 提示信息
+    liked: bool  # 用户是否喜欢
+    shot_success: bool  # 是否出片成功
+
+
+class DatabaseStatusResponse(BaseSchema):  # 定义数据库状态响应模型
+    connected: bool  # 是否已连接
+    message: str  # 状态信息
+
+
+class HistoryListResponse(BaseSchema):  # 定义历史记录列表响应模型
+    items: List[HistoryRecord]  # 历史记录列表
+
+
+class MessageResponse(BaseSchema):  # 定义通用消息响应模型
+    message: str  # 消息内容
+
+
+# ========== 接口专用响应模型 ==========
+
+
+class SuggestApiResponse(BaseSchema):  # /suggest 接口响应
+    success: bool = True
+    message: str = "建议生成成功"
+    data: SuggestResponse
+
+
+class DatabaseStatusApiResponse(BaseSchema):  # /db/status 接口响应
+    success: bool = True
+    message: str = "数据库状态查询成功"
+    data: DatabaseStatusResponse
+
+
+class CreateHistoryApiResponse(BaseSchema):  # /history POST 接口响应
+    success: bool = True
+    message: str = "历史记录保存成功"
+    data: MessageResponse
+
+
+class GetHistoryApiResponse(BaseSchema):  # /history GET 接口响应
+    success: bool = True
+    message: str = "历史记录查询成功"
+    data: HistoryListResponse
+
+
+class FeedbackApiResponse(BaseSchema):  # /feedback 接口响应
+    success: bool = True
+    message: str = "反馈提交成功"
+    data: FeedbackResponse

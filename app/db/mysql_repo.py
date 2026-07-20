@@ -170,11 +170,17 @@ class MySQLHistoryRepository:  # 定义MySQL历史记录仓储
         self.connection.commit()  # 提交事务
         cursor.close()  # 关闭游标
 
-    def list(self) -> list:  # 查询全部历史记录
+    def list(self, user_id: int | None = None) -> list:  # 查询历史记录，支持按用户ID筛选
         cursor = self.connection.cursor()  # 获取游标对象
-        cursor.execute(  # 执行查询语句
-            self._placeholder_sql("SELECT id, user_id, input_data, output_data, liked, shot_success, created_at FROM photo_style_history ORDER BY id DESC")
-        )
+        if user_id is not None:  # 如果提供了用户ID
+            cursor.execute(  # 执行带筛选的查询
+                self._placeholder_sql("SELECT id, user_id, input_data, output_data, liked, shot_success, created_at FROM photo_style_history WHERE user_id = %s ORDER BY id DESC"),
+                (user_id,)
+            )
+        else:  # 否则查询全部
+            cursor.execute(  # 执行查询语句
+                self._placeholder_sql("SELECT id, user_id, input_data, output_data, liked, shot_success, created_at FROM photo_style_history ORDER BY id DESC")
+            )
         rows = cursor.fetchall()  # 获取结果集
         cursor.close()  # 关闭游标
         return rows  # 返回查询结果

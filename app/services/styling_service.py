@@ -1,4 +1,4 @@
-from app.models import SuggestRequest, SuggestResponse  # 引入请求响应模型
+from app.schemas.history import SuggestRequest, SuggestResponse  # 引入请求响应模型
 from app.services.qwen_suggest_client import generate_suggestion  # 引入Qwen建议生成客户端
 
 

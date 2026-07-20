@@ -1,6 +1,6 @@
 from typing import TypedDict  # 引入TypedDict用于定义工作流状态
 
-from app.models import SuggestRequest  # 引入请求模型
+from app.schemas.history import SuggestRequest  # 引入请求模型
 
 
 class PhotoStyleState(TypedDict, total=False):  # 定义PhotoStyle工作流状态
