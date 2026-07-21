@@ -80,14 +80,26 @@ def login_user(username: str, password: str) -> dict:
 
 def get_user_profile(username: str) -> dict:
     """获取用户资料"""
-    db = SessionLocal()
-    try:
-        user = db.query(User).filter(User.username == username).first()
-        if not user:
-            raise ValueError("用户不存在")
-        return user.to_dict()
-    finally:
-        db.close()
+    db = SessionLocal()  # 创建数据库会话
+    try:  # 开始查询
+        user = db.query(User).filter(User.username == username).first()  # 按用户名查找用户
+        if not user:  # 如果用户不存在
+            raise ValueError("用户不存在")  # 直接抛出异常
+        return user.to_dict()  # 返回用户字典
+    finally:  # 无论如何都关闭会话
+        db.close()  # 关闭数据库会话
+
+
+def get_user_profile_by_id(user_id: int) -> dict:
+    """根据用户ID获取用户资料"""
+    db = SessionLocal()  # 创建数据库会话
+    try:  # 开始查询
+        user = db.query(User).filter(User.id == user_id).first()  # 按ID查找用户
+        if not user:  # 如果用户不存在
+            raise ValueError("用户不存在")  # 直接抛出异常
+        return user.to_dict()  # 返回用户字典
+    finally:  # 无论如何都关闭会话
+        db.close()  # 关闭数据库会话
 
 
 def upsert_user_photo(username: str, photo_path: str, photo_mime_type: str | None = None, face_analysis: dict | None = None, simple_analysis: dict | None = None) -> dict:

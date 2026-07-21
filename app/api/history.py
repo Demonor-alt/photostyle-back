@@ -2,7 +2,7 @@ import json  # 引入json用于构造SSE数据
 import logging  # 引入logging用于记录接口调用信息
 
 from fastapi import APIRouter, Depends  # 引入路由与依赖注入能力
-from pydantic import BaseModel
+from pydantic import BaseModel  # 引入Pydantic基础模型
 from fastapi.responses import StreamingResponse  # 引入流式响应
 
 from app.schemas.history import (
@@ -22,13 +22,15 @@ from app.schemas.error import (
     HistorySaveError,
 )
 from app.services.orchestrator import format_sse_event, run_pipeline  # 引入调度入口和SSE格式化器
-from app.db.history_service import (
+from app.db.history_mapper import (  # 引入历史数据服务
     get_database_status,
+    get_history_record,
     list_history_records,
     save_history_record,
     update_history_feedback,
 )
-from app.db.user_service import get_user_profile  # 引入用户查询服务
+from app.db.user_mapper import get_user_profile_by_id  # 引入用户查询服务
+from app.rag.vector_writing import upsert_photo_style_embedding  # 引入RAG向量服务
 from app.api.utils import save_upload_file, parse_tag_list  # 引入工具函数
 
 logger = logging.getLogger(__name__)  # 创建路由模块日志器
@@ -160,11 +162,18 @@ async def get_history(user_id: int | None = None) -> GetHistoryApiResponse:  # �
 
 @router.post("/history/{history_id}/feedback", response_model=MessageResponse)
 async def update_history(history_id: int, payload: FeedbackUpdateRequest) -> MessageResponse:
-    update_history_feedback(
-        history_id,
-        payload.makeup_rating,
-        payload.outfit_rating,
-        payload.pose_rating,
-        payload.feedback_comment,
-    )
+    history = update_history_feedback(  # 更新历史记录并获取最新数据
+        history_id,  # 传入历史ID
+        payload.makeup_rating,  # 传入妆容评分
+        payload.outfit_rating,  # 传入穿搭评分
+        payload.pose_rating,  # 传入姿势评分
+        payload.feedback_comment,  # 传入点评内容
+    )  # 更新结束
+    current_history = get_history_record(history_id)  # 重新读取历史记录
+    user_id = int(current_history["user_id"])  # 统一转换为整数用户ID
+    user = get_user_profile_by_id(user_id)  # 获取用户资料
+    embedding_payload = upsert_photo_style_embedding(history_id, user_id)  # 写入Milvus向量
+    logger.info("feedback.embedding.saved=%s", embedding_payload["metadata"])  # 记录向量写入结果
+    if user.get("simple_analysis") is not None:  # 如果用户已有画像信息
+        logger.info("feedback.user.simple_analysis.ready user_id=%s", user["id"])  # 记录用户画像可用
     return MessageResponse(message="点评保存成功")

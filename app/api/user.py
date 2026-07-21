@@ -29,7 +29,7 @@ from app.schemas.user import (
     UploadPhotoFormParams,
     UserResponse,
 )
-from app.db.user_service import (
+from app.db.user_mapper import (
     ensure_user,
     get_user_profile,
     login_user,
