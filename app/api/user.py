@@ -36,7 +36,7 @@ from app.db.user_service import (
     upsert_user_photo,
     update_user_profile,
 )
-from app.services.qwen_face_client import analyze_image  # 引入Qwen图片分析服务
+from app.services.llm.qwen_face_client import analyze_image  # 引入Qwen图片分析服务
 from app.api.utils import save_upload_file  # 引入文件上传工具函数
 
 logger = logging.getLogger(__name__)  # 创建路由模块日志器
