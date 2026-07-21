@@ -13,3 +13,4 @@ openai==1.61.0
 langgraph==0.2.39
 psycopg2-binary==2.9.10
 pymilvus==2.4.0
+sentence-transformers==3.0.1

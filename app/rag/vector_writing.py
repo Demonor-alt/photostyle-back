@@ -1,164 +1,241 @@
-"""Milvus 向量写入与文本构建服务"""  # 模块说明
-from __future__ import annotations  # 启用未来注解语法
+"""Milvus 向量写入与文本构建服务。"""
+from __future__ import annotations  # 启用注解的延迟求值，支持前向引用
 
-import json  # 引入json用于序列化元数据
-import os  # 引入os用于读取环境变量
-from datetime import datetime  # 引入datetime用于处理时间字段
-from typing import Any  # 引入Any用于宽松类型标注
+import json  # JSON 序列化和反序列化
+import os  # 操作系统环境变量和路径操作
+from datetime import datetime  # 日期时间处理
+from typing import Any  # 类型提示支持
 
-from pymilvus import Collection, CollectionSchema, DataType, FieldSchema, connections, utility  # 引入Milvus官方SDK
+from pymilvus import Collection, CollectionSchema, DataType, FieldSchema, connections, utility  # Milvus 向量数据库客户端
 
-from app.db.user_mapper import get_user_profile_by_id  # 引入用户读取服务
-from app.db.history_mapper import get_history_record  # 引入历史查询服务
-from app.utils.runtime import logger  # 引入统一日志器
+from app.db.history_mapper import get_history_record  # 从数据库获取历史记录
+from app.db.user_mapper import get_user_profile_by_id  # 从数据库获取用户画像
+from app.rag.embedding import embed_text, get_embedding_dimension, get_embedding_model_name  # 文本向量化功能
+from app.utils.runtime import logger  # 日志记录器
 
-_COLLECTION_NAME = os.getenv("MILVUS_COLLECTION_NAME", "photo_style_embeddings")  # 定义集合名称
-_EMBEDDING_DIM = int(os.getenv("MILVUS_EMBEDDING_DIM", "768"))  # 定义向量维度
-_CONNECTION_ALIAS = os.getenv("MILVUS_ALIAS", "default")  # 定义Milvus连接别名
-
-
-def _safe_json_dumps(value: Any) -> str:  # 定义安全JSON序列化函数
-    return json.dumps(value, ensure_ascii=False, sort_keys=True, default=str)  # 返回稳定的JSON字符串
-
-
-def _safe_get(mapping: Any, key: str, default: Any = None) -> Any:  # 定义安全取值函数
-    if isinstance(mapping, dict):  # 如果当前对象是字典
-        return mapping.get(key, default)  # 直接按键取值
-    return default  # 否则返回默认值
+# Milvus collection 名称，默认存放照片风格推荐相关的历史记忆向量
+_COLLECTION_NAME = os.getenv("MILVUS_COLLECTION_NAME", "photo_style_embeddings")  # 从环境变量读取集合名称，默认为 photo_style_embeddings
+# Milvus 连接别名，便于 pymilvus 在同一进程中复用连接
+_CONNECTION_ALIAS = os.getenv("MILVUS_ALIAS", "default")  # 从环境变量读取连接别名，默认为 default
+# Milvus 中保存 embedding 的向量字段名，检索模块会复用该字段名
+_VECTOR_FIELD = "embedding"  # 定义向量字段名为 embedding
 
 
-def _flatten_simple_analysis(value: Any) -> str:  # 将simple_analysis转成可向量化文本
-    if not isinstance(value, dict):  # 如果不是字典
-        return ""  # 返回空字符串
-    parts: list[str] = []  # 定义文本片段列表
-    for key in ["脸型", "线条感", "五官量感", "面部对比度", "肤色", "肤质", "气质"]:  # 遍历基础字段
-        item = value.get(key)  # 取出字段值
-        if item:  # 如果字段有值
-            parts.append(f"{key}:{item}")  # 追加文本片段
-    for section in ["眼睛", "眉毛", "鼻子", "嘴巴", "耳朵"]:  # 遍历五官分组
-        section_value = value.get(section)  # 取出分组内容
-        if isinstance(section_value, dict):  # 如果分组是字典
-            for sub_key, sub_value in section_value.items():  # 遍历子字段
-                if sub_value is not None and sub_value != "":  # 如果子字段有值
-                    parts.append(f"{section}{sub_key}:{sub_value}")  # 追加文本片段
-    style_vector = value.get("风格向量")  # 取出风格向量
-    if isinstance(style_vector, dict):  # 如果风格向量是字典
-        vector_text = ",".join(f"{k}:{v}" for k, v in style_vector.items())  # 拼接为字符串
-        if vector_text:  # 如果拼接结果不为空
-            parts.append(f"风格向量:{vector_text}")  # 追加风格向量文本
-    return "；".join(parts)  # 用中文分号拼接全部片段
+def _safe_json_dumps(value: Any) -> str:  # 定义安全的 JSON 序列化函数
+    """将任意值稳定地序列化为中文友好的 JSON 字符串。"""
+    return json.dumps(value, ensure_ascii=False, sort_keys=True, default=str)  # 序列化为 JSON，不转义中文，键排序，无法序列化的值转为字符串
 
 
-def _normalize_tags(value: Any) -> list[str]:  # 将标签统一规范为字符串数组
-    if isinstance(value, list):  # 如果本来就是列表
-        return [str(item).strip() for item in value if str(item).strip()]  # 转成字符串并过滤空项
-    if isinstance(value, str) and value.strip():  # 如果是字符串且非空
-        return [part.strip() for part in value.replace("，", ",").split(",") if part.strip()]  # 按逗号拆分
+def _safe_get(mapping: Any, key: str, default: Any = None) -> Any:  # 定义安全的字典取值函数
+    """只在对象是 dict 时取值，避免历史数据结构异常导致报错。"""
+    if isinstance(mapping, dict):  # 检查对象是否为字典类型
+        return mapping.get(key, default)  # 从字典中获取键值，不存在则返回默认值
+    return default  # 如果不是字典，直接返回默认值
+
+
+def _flatten_simple_analysis(value: Any) -> str:  # 定义将用户画像压平为文本的函数
+    """将用户人脸/风格画像压平成适合向量化的短文本。"""
+    if not isinstance(value, dict):  # 检查输入是否为字典类型
+        return ""  # 不是字典则返回空字符串
+    parts: list[str] = []  # 初始化文本片段列表
+    # 提取用户画像中的基础维度，作为后续个性化检索的重要语义特征
+    for key in ["脸型", "线条感", "五官量感", "面部对比度", "肤色", "肤质", "气质"]:  # 遍历基础维度键名
+        item = value.get(key)  # 获取该维度的值
+        if item:  # 如果值存在
+            parts.append(f"{key}:{item}")  # 将键值对格式化后添加到列表
+    # 提取五官细节，帮助模型理解用户适合的妆造、姿势和拍摄角度
+    for section in ["眼睛", "眉毛", "鼻子", "嘴巴", "耳朵"]:  # 遍历五官部位
+        section_value = value.get(section)  # 获取该部位的详细信息
+        if isinstance(section_value, dict):  # 检查部位信息是否为字典
+            for sub_key, sub_value in section_value.items():  # 遍历部位的子属性
+                if sub_value is not None and sub_value != "":  # 如果子属性值有效
+                    parts.append(f"{section}{sub_key}:{sub_value}")  # 将部位子属性格式化后添加到列表
+    # 风格向量是结构化偏好分数，转为文本后可以进入同一个语义空间
+    style_vector = value.get("风格向量")  # 获取风格向量字典
+    if isinstance(style_vector, dict):  # 检查风格向量是否为字典
+        vector_text = ",".join(f"{k}:{v}" for k, v in style_vector.items())  # 将风格向量转为逗号分隔的键值对字符串
+        if vector_text:  # 如果风格向量文本不为空
+            parts.append(f"风格向量:{vector_text}")  # 添加到片段列表
+    return "；".join(parts)  # 用分号连接所有文本片段并返回
+
+
+def _normalize_tags(value: Any) -> list[str]:  # 定义标签规范化函数
+    """将标签字段统一整理为字符串列表。"""
+    if isinstance(value, list):  # 如果输入是列表
+        return [str(item).strip() for item in value if str(item).strip()]  # 转为字符串并去除空白，过滤空值
+    if isinstance(value, str) and value.strip():  # 如果输入是非空字符串
+        return [part.strip() for part in value.replace("，", ",").split(",") if part.strip()]  # 将中文逗号替换为英文逗号，分割后去除空白
     return []  # 其他情况返回空列表
 
 
-def _build_history_text(history: dict, user_profile: dict | None = None) -> str:  # 构建历史记录向量化文本
-    input_data = history.get("input_data") or {}  # 取输入数据
-    output_data = history.get("output_data") or {}  # 取输出数据
-    simple_analysis = _safe_get(user_profile, "simple_analysis", {})  # 取用户简化分析
-    comment = history.get("feedback_comment") or ""  # 取点评内容
-    avg_score = history.get("avg_score")  # 取平均评分
-    parts = [  # 组装文本片段
-        f"风格:{_safe_get(input_data, 'style', '')}",  # 添加风格信息
-        f"时间:{_safe_get(input_data, 'time', '')}",  # 添加时间信息
-        f"地点:{_safe_get(input_data, 'location', '')}",  # 添加地点信息
-        f"天气:{_safe_get(input_data, 'weather', '')}",  # 添加天气信息
-        f"标签:{','.join(_normalize_tags(_safe_get(input_data, 'extra_tags', [])))}",  # 添加标签信息
-        f"输入:{_safe_json_dumps(input_data)}",  # 添加输入JSON文本
-        f"输出:{_safe_json_dumps(output_data)}",  # 添加输出JSON文本
+def _build_history_text(history: dict, user_profile: dict | None = None) -> str:  # 定义构建历史记录文本的函数
+    """构建一条历史记录对应的入库文本。"""
+    input_data = history.get("input_data") or {}  # 获取输入数据，不存在则使用空字典
+    output_data = history.get("output_data") or {}  # 获取输出数据，不存在则使用空字典
+    simple_analysis = _safe_get(user_profile, "simple_analysis", {})  # 安全获取用户画像分析数据
+    comment = history.get("feedback_comment") or ""  # 获取反馈评论，不存在则使用空字符串
+    avg_score = history.get("avg_score")  # 获取平均评分
+    # 同时保留结构化摘要和完整输入/输出快照，让检索既能匹配场景，也能匹配历史推荐内容
+    parts = [  # 构建文本片段列表
+        f"风格:{_safe_get(input_data, 'style', '')}",  # 提取风格信息
+        f"时间:{_safe_get(input_data, 'time', '')}",  # 提取时间信息
+        f"地点:{_safe_get(input_data, 'location', '')}",  # 提取地点信息
+        f"天气:{_safe_get(input_data, 'weather', '')}",  # 提取天气信息
+        f"标签:{','.join(_normalize_tags(_safe_get(input_data, 'extra_tags', [])))}",  # 提取并规范化标签
+        f"输入:{_safe_json_dumps(input_data)}",  # 将完整输入数据序列化为 JSON
+        f"输出:{_safe_json_dumps(output_data)}",  # 将完整输出数据序列化为 JSON
         f"平均评分:{avg_score if avg_score is not None else ''}",  # 添加平均评分
-        f"点评:{comment}",  # 添加评论内容
-        f"用户画像:{_flatten_simple_analysis(simple_analysis)}",  # 添加用户画像文本
-    ]  # 片段结束
-    return "\n".join(part for part in parts if part)  # 拼接为多行文本
+        f"点评:{comment}",  # 添加用户点评
+        f"用户画像:{_flatten_simple_analysis(simple_analysis)}",  # 添加压平后的用户画像
+    ]
+    return "\n".join(part for part in parts if part)  # 用换行符连接非空片段并返回
 
 
-def _get_milvus_uri() -> str:  # 获取Milvus连接地址
-    return os.getenv("MILVUS_URI", "http://localhost:19530")  # 返回默认连接地址
+def _get_milvus_uri() -> str:  # 定义获取 Milvus URI 的函数
+    """读取 Milvus 连接地址。"""
+    return os.getenv("MILVUS_URI", "http://localhost:19530")  # 从环境变量读取 Milvus URI，默认为本地地址
 
 
-def _get_milvus_token() -> str | None:  # 获取Milvus认证信息
-    token = os.getenv("MILVUS_TOKEN")  # 读取token
-    return token if token else None  # 返回可用token或None
+def _get_milvus_token() -> str | None:  # 定义获取 Milvus 认证令牌的函数
+    """读取 Milvus token；本地无认证时返回 None。"""
+    token = os.getenv("MILVUS_TOKEN")  # 从环境变量读取 Milvus 认证令牌
+    return token if token else None  # 如果令牌存在则返回，否则返回 None
 
 
-def _embedding_from_text(text: str) -> list[float]:  # 生成占位向量
-    dimension = _EMBEDDING_DIM  # 读取向量维度
-    if not text.strip():  # 如果文本为空
-        return [0.0] * dimension  # 返回零向量
-    values = [0.0] * dimension  # 初始化向量
-    for index, char in enumerate(text):  # 遍历文本字符
-        values[index % dimension] += (ord(char) % 97) / 97.0  # 使用字符码构建稳定向量
-    norm = sum(v * v for v in values) ** 0.5  # 计算向量范数
-    if norm == 0:  # 如果范数为零
-        return values  # 直接返回
-    return [round(v / norm, 6) for v in values]  # 归一化后返回
+def get_collection_name() -> str:  # 定义获取集合名称的公开函数
+    """返回当前 RAG 使用的 Milvus collection 名称。"""
+    return _COLLECTION_NAME  # 返回全局定义的集合名称
 
 
-def build_photo_style_embedding_payload(history: dict, user_profile: dict | None = None) -> dict:  # 构建Milvus写入载荷
-    text = _build_history_text(history, user_profile=user_profile)  # 生成可向量化文本
-    embedding = _embedding_from_text(text)  # 生成向量
-    input_data = history.get("input_data") or {}  # 取输入数据
-    output_data = history.get("output_data") or {}  # 取输出数据
-    tags = _normalize_tags(_safe_get(input_data, "extra_tags", []))  # 提取标签
-    metadata = {  # 构造元数据
-        "time": _safe_get(input_data, "time"),  # 写入时间
-        "style": _safe_get(input_data, "style"),  # 写入风格
-        "weather": _safe_get(input_data, "weather"),  # 写入天气
-        "location": _safe_get(input_data, "location"),  # 写入地点
-        "tags": tags,  # 写入标签
-        "avg_score": history.get("avg_score"),  # 写入平均分
-        "created_at": history.get("created_at") or datetime.utcnow().isoformat(),  # 写入创建时间
-        "input_data": input_data,  # 保留输入快照
-        "output_data": output_data,  # 保留输出快照
-        "feedback_comment": history.get("feedback_comment"),  # 保留评论
-        "simple_analysis": _safe_get(user_profile, "simple_analysis", {}),  # 保留用户画像
-        "source": "history_feedback",  # 标记来源
-    }  # 元数据结束
-    return {  # 返回统一结构
-        "user_id": history.get("user_id"),  # 返回用户ID
-        "embedding": embedding,  # 返回向量
-        "metadata": metadata,  # 返回元数据
-        "text": text,  # 返回向量化文本
-    }  # 返回结束
+def get_vector_field_name() -> str:  # 定义获取向量字段名的公开函数
+    """返回 Milvus 向量字段名。"""
+    return _VECTOR_FIELD  # 返回全局定义的向量字段名
 
 
-def _ensure_collection() -> Any:  # 确保集合存在
-    connections.connect(alias=_CONNECTION_ALIAS, uri=_get_milvus_uri(), token=_get_milvus_token())  # 建立连接
-    if utility.has_collection(_COLLECTION_NAME):  # 如果集合已存在
-        return Collection(_COLLECTION_NAME)  # 直接返回集合对象
-    fields = [  # 定义字段结构
-        FieldSchema(name="id", dtype=DataType.INT64, is_primary=True, auto_id=True),  # 主键字段
-        FieldSchema(name="user_id", dtype=DataType.INT64),  # 用户ID字段
-        FieldSchema(name="embedding", dtype=DataType.FLOAT_VECTOR, dim=_EMBEDDING_DIM),  # 向量字段
-        FieldSchema(name="metadata", dtype=DataType.JSON),  # JSON元数据字段
-    ]  # 字段结束
-    schema = CollectionSchema(fields=fields, description="Photo style embeddings")  # 创建集合结构
-    collection = Collection(name=_COLLECTION_NAME, schema=schema)  # 创建集合
-    collection.create_index(  # 创建向量索引
-        field_name="embedding",  # 指定向量字段
-        index_params={"index_type": "HNSW", "metric_type": "COSINE", "params": {"M": 16, "efConstruction": 200}},  # 指定索引参数
-    )  # 索引创建结束
-    return collection  # 返回集合对象
+def get_connection_alias() -> str:  # 定义获取连接别名的公开函数
+    """返回 Milvus 连接别名。"""
+    return _CONNECTION_ALIAS  # 返回全局定义的连接别名
 
 
-def upsert_photo_style_embedding(history_id: int, user_id: int | None = None) -> dict:  # 写入或更新历史对应向量
-    collection = _ensure_collection()  # 获取集合对象
-    history = get_history_record(history_id)  # 读取当前历史记录
-    user_profile = get_user_profile_by_id(user_id) if user_id is not None else None  # 读取用户画像
-    payload = build_photo_style_embedding_payload(history, user_profile=user_profile)  # 构建向量载荷
-    entity = [  # 组装待插入实体
-        [payload["user_id"]],  # 用户ID列表
-        [payload["embedding"]],  # 向量列表
-        [json.dumps(payload["metadata"], ensure_ascii=False, default=str)],  # 元数据列表
-    ]  # 实体结束
-    collection.insert(data=entity)  # 执行插入
-    collection.flush()  # 刷新落盘
-    collection.load()  # 加载集合到内存，确保查询能立即看到新数据
-    logger.info("milvus.embedding.saved history_id=%s user_id=%s", history_id, user_id)  # 记录保存日志
-    return payload  # 返回载荷
+def connect_milvus() -> None:  # 定义建立 Milvus 连接的函数
+    """建立 Milvus 连接；重复调用时 pymilvus 会复用同一 alias。"""
+    connections.connect(alias=_CONNECTION_ALIAS, uri=_get_milvus_uri(), token=_get_milvus_token())  # 使用别名、URI 和令牌建立连接
+
+
+def build_photo_style_embedding_payload(history: dict, user_profile: dict | None = None) -> dict:  # 定义构建向量载荷的函数
+    """将历史记录和用户画像转换为可写入 Milvus 的统一载荷。"""
+    text = _build_history_text(history, user_profile=user_profile)  # 构建历史记录的文本表示
+    # 文档入库使用原文向量，不添加查询前缀
+    embedding = embed_text(text)  # 将文本转换为向量
+    input_data = history.get("input_data") or {}  # 获取输入数据
+    output_data = history.get("output_data") or {}  # 获取输出数据
+    tags = _normalize_tags(_safe_get(input_data, "extra_tags", []))  # 规范化标签
+    history_id = int(history["id"])  # 获取历史记录 ID
+    user_id = int(history["user_id"])  # 获取用户 ID
+    avg_score = history.get("avg_score")  # 获取平均评分
+    # metadata 保留可过滤字段和完整快照，便于检索、重排序和问题排查
+    metadata = {  # 构建元数据字典
+        "history_id": history_id,  # 历史记录 ID
+        "doc_type": "history_feedback",  # 文档类型标记为历史反馈
+        "time": _safe_get(input_data, "time"),  # 时间信息
+        "style": _safe_get(input_data, "style"),  # 风格信息
+        "weather": _safe_get(input_data, "weather"),  # 天气信息
+        "location": _safe_get(input_data, "location"),  # 地点信息
+        "tags": tags,  # 标签列表
+        "avg_score": avg_score,  # 平均评分
+        "is_positive_feedback": avg_score is not None and float(avg_score) >= 4.0,  # 判断是否为正向反馈（评分>=4.0）
+        "created_at": history.get("created_at") or datetime.utcnow().isoformat(),  # 创建时间，不存在则使用当前时间
+        "updated_at": datetime.utcnow().isoformat(),  # 更新时间为当前时间
+        "input_data": input_data,  # 完整输入数据快照
+        "output_data": output_data,  # 完整输出数据快照
+        "feedback_comment": history.get("feedback_comment"),  # 用户反馈评论
+        "simple_analysis": _safe_get(user_profile, "simple_analysis", {}),  # 用户画像分析
+        "source": "history_feedback",  # 数据来源标记
+        "embedding_model": get_embedding_model_name(),  # 使用的向量模型名称
+    }
+    return {  # 返回完整的载荷字典
+        "history_id": history_id,  # 历史记录 ID
+        "user_id": user_id,  # 用户 ID
+        "embedding": embedding,  # 向量数据
+        "metadata": metadata,  # 元数据
+        "text": text,  # 文本内容
+    }
+
+
+def _ensure_collection() -> Collection:
+    """确保 Milvus collection 存在，并校验向量维度与当前 BGE 模型一致。"""
+    connect_milvus()
+    embedding_dim = get_embedding_dimension()
+    if utility.has_collection(_COLLECTION_NAME):
+        collection = Collection(_COLLECTION_NAME)
+        vector_field = next((field for field in collection.schema.fields if field.name == _VECTOR_FIELD), None)
+        if vector_field is not None and vector_field.params.get("dim") != embedding_dim:
+            raise RuntimeError(
+                f"Milvus collection '{_COLLECTION_NAME}' dim={vector_field.params.get('dim')} "
+                f"与当前 embedding dim={embedding_dim} 不一致，请迁移或重建 collection"
+            )
+        return collection
+
+    # 新 collection 显式保存 history_id、user_id、doc_type、text，方便过滤、去重和返回可读上下文。
+    fields = [
+        FieldSchema(name="id", dtype=DataType.INT64, is_primary=True, auto_id=True),
+        FieldSchema(name="history_id", dtype=DataType.INT64),
+        FieldSchema(name="user_id", dtype=DataType.INT64),
+        FieldSchema(name="doc_type", dtype=DataType.VARCHAR, max_length=64),
+        FieldSchema(name="text", dtype=DataType.VARCHAR, max_length=8192),
+        FieldSchema(name=_VECTOR_FIELD, dtype=DataType.FLOAT_VECTOR, dim=embedding_dim),
+        FieldSchema(name="metadata", dtype=DataType.JSON),
+    ]
+    schema = CollectionSchema(fields=fields, description="Photo style embeddings")
+    collection = Collection(name=_COLLECTION_NAME, schema=schema)
+    # HNSW 适合中小规模向量检索，COSINE 与归一化 BGE 向量匹配。
+    collection.create_index(
+        field_name=_VECTOR_FIELD,
+        index_params={"index_type": "HNSW", "metric_type": "COSINE", "params": {"M": 16, "efConstruction": 200}},
+    )
+    # 标量索引用于提升按历史 ID 和用户 ID 过滤的效率。
+    collection.create_index(field_name="history_id", index_name="idx_history_id")
+    collection.create_index(field_name="user_id", index_name="idx_user_id")
+    collection.load()
+    return collection
+
+
+def _delete_existing_history_embedding(collection: Collection, history_id: int, user_id: int) -> None:
+    """删除同一用户同一历史记录的旧向量，保证 upsert 不产生重复记忆。"""
+    expr = f"history_id == {history_id} and user_id == {user_id} and doc_type == 'history_feedback'"
+    try:
+        result = collection.delete(expr)
+        collection.flush()
+        logger.info("milvus.embedding.deleted expr=%s result=%s", expr, result)
+    except Exception:
+        logger.exception("milvus.embedding.delete_failed expr=%s", expr)
+        raise
+
+
+def upsert_photo_style_embedding(history_id: int, user_id: int | None = None) -> dict:
+    """为指定历史记录写入或更新向量记忆。"""
+    collection = _ensure_collection()
+    history = get_history_record(history_id)
+    resolved_user_id = int(user_id if user_id is not None else history["user_id"])
+    user_profile = get_user_profile_by_id(resolved_user_id)
+    payload = build_photo_style_embedding_payload(history, user_profile=user_profile)
+
+    # 先删旧记录再插入新记录，修正原本 insert-only 导致的重复向量问题。
+    _delete_existing_history_embedding(collection, payload["history_id"], payload["user_id"])
+    entity = [
+        [payload["history_id"]],
+        [payload["user_id"]],
+        [payload["metadata"]["doc_type"]],
+        [payload["text"][:8192]],
+        [payload["embedding"]],
+        [payload["metadata"]],
+    ]
+    collection.insert(data=entity)
+    collection.flush()
+    logger.info(
+        "milvus.embedding.upserted history_id=%s user_id=%s model=%s",
+        payload["history_id"],
+        payload["user_id"],
+        payload["metadata"]["embedding_model"],
+    )
+    return payload
