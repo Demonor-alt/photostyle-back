@@ -83,7 +83,6 @@ async def suggest(  # 定义支持表单上传的建议接口
             "pose_rating": 0,
             "feedback_comment": None,
             "reviewed": False,
-            "shot_success": False,
         })
     except Exception as exc:
         logger.exception("suggest.history.save_failed")

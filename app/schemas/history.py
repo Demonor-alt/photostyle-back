@@ -65,7 +65,6 @@ class HistoryRecord(BaseSchema):  # 定义历史记录模型
     pose_rating: int = 0  # 姿势评分
     feedback_comment: Optional[str] = None  # 点评内容
     reviewed: bool = False  # 是否已点评
-    shot_success: bool = False  # 是否出片成功
 
 
 class DatabaseStatusResponse(BaseSchema):  # 定义数据库状态响应模型

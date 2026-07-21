@@ -34,7 +34,6 @@ def _ensure_review_payload(record: dict) -> dict:
         "pose_rating": int(record.get("pose_rating", 0) or 0),
         "feedback_comment": record.get("feedback_comment") or None,
         "reviewed": bool(record.get("reviewed", False)),
-        "shot_success": bool(record.get("shot_success", False)),
     }
 
 
