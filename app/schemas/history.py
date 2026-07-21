@@ -60,7 +60,11 @@ class HistoryRecord(BaseSchema):  # 定义历史记录模型
     user_id: int  # 用户ID
     input_data: dict  # 输入数据（不再绑定SuggestRequest）
     output_data: dict  # 输出数据（支持旧格式和新格式）
-    liked: bool = False  # 用户是否喜欢
+    makeup_rating: int = 0  # 妆容评分
+    outfit_rating: int = 0  # 穿搭评分
+    pose_rating: int = 0  # 姿势评分
+    feedback_comment: Optional[str] = None  # 点评内容
+    reviewed: bool = False  # 是否已点评
     shot_success: bool = False  # 是否出片成功
 
 

@@ -2,6 +2,7 @@ import json  # 引入json用于构造SSE数据
 import logging  # 引入logging用于记录接口调用信息
 
 from fastapi import APIRouter, Depends  # 引入路由与依赖注入能力
+from pydantic import BaseModel
 from fastapi.responses import StreamingResponse  # 引入流式响应
 
 from app.schemas.history import (
@@ -35,6 +36,13 @@ logger = logging.getLogger(__name__)  # 创建路由模块日志器
 router = APIRouter()  # 创建路由实例
 
 
+class FeedbackUpdateRequest(BaseModel):
+    makeup_rating: int = 0
+    outfit_rating: int = 0
+    pose_rating: int = 0
+    feedback_comment: str | None = None
+
+
 @router.post("/suggest", response_model=SuggestApiResponse)  # 定义建议生成接口
 async def suggest(  # 定义支持表单上传的建议接口
     form: SuggestFormParams = Depends(),
@@ -65,12 +73,16 @@ async def suggest(  # 定义支持表单上传的建议接口
         input_data.pop("face_analysis", None)
         input_data.pop("username", None)
         input_data["extra_tags"] = []
-        
+
         save_history_record({
             "user_id": user["id"],
             "input_data": input_data,
             "output_data": result.model_dump(),
-            "liked": False,
+            "makeup_rating": 0,
+            "outfit_rating": 0,
+            "pose_rating": 0,
+            "feedback_comment": None,
+            "reviewed": False,
             "shot_success": False,
         })
     except Exception as exc:
@@ -145,3 +157,15 @@ async def get_history(user_id: int | None = None) -> GetHistoryApiResponse:  # �
     return GetHistoryApiResponse(
         data=HistoryListResponse(items=items)
     )
+
+
+@router.post("/history/{history_id}/feedback", response_model=MessageResponse)
+async def update_history(history_id: int, payload: FeedbackUpdateRequest) -> MessageResponse:
+    update_history_feedback(
+        history_id,
+        payload.makeup_rating,
+        payload.outfit_rating,
+        payload.pose_rating,
+        payload.feedback_comment,
+    )
+    return MessageResponse(message="点评保存成功")
