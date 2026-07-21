@@ -24,6 +24,7 @@ class UpdateUserProfileRequest(BaseSchema):  # 定义更新用户资料请求模
     photo_path: Optional[str] = None  # 图片路径
     photo_mime_type: Optional[str] = None  # 图片类型
     face_analysis: Optional[dict] = None  # 人脸分析结果
+    simple_analysis: Optional[dict] = None  # 简化人脸分析结果
 
 
 class UploadPhotoFormParams:  # 定义照片上传表单参数（用于FastAPI依赖注入）
@@ -45,6 +46,7 @@ class UploadPhotoData(BaseSchema):  # 定义照片上传响应数据
     photo_path: Optional[str] = None  # 图片路径
     photo_mime_type: Optional[str] = None  # 图片类型
     face_analysis: Optional[dict] = None  # 人脸分析结果
+    simple_analysis: Optional[dict] = None  # 简化人脸分析结果
 
 
 class UserResponse(BaseSchema):  # 定义用户响应模型
@@ -53,6 +55,7 @@ class UserResponse(BaseSchema):  # 定义用户响应模型
     photo_path: Optional[str] = None  # 图片路径
     photo_mime_type: Optional[str] = None  # 图片类型
     face_analysis: Optional[dict] = None  # 人脸分析结果
+    simple_analysis: Optional[dict] = None  # 简化人脸分析结果
     created_at: Optional[datetime] = None  # 创建时间
     updated_at: Optional[datetime] = None  # 更新时间
 

@@ -54,8 +54,9 @@ async def upload_photo(
     image_path, image_mime_type = save_upload_file(image)
     try:
         face_analysis = analyze_image(image_path=image_path, image_mime_type=image_mime_type)
+        simple_analysis = face_analysis.get("simple_analysis") if isinstance(face_analysis, dict) else None
         # 只有检测到人脸时才把照片写入数据库，避免无效照片污染用户资料
-        user = upsert_user_photo(form.username, image_path, image_mime_type, face_analysis)
+        user = upsert_user_photo(form.username, image_path, image_mime_type, face_analysis, simple_analysis)
     except ValueError as exc:
         if image_path:
             try:
@@ -80,6 +81,7 @@ async def upload_photo(
             photo_path=user.get("photo_path"),
             photo_mime_type=user.get("photo_mime_type"),
             face_analysis=face_analysis,
+            simple_analysis=simple_analysis,
         )
     )
 

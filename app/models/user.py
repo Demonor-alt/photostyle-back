@@ -14,6 +14,7 @@ class User(Base):
     photo_path = Column(String(500), nullable=True, comment="用户照片路径")
     photo_mime_type = Column(String(100), nullable=True, comment="照片MIME类型")
     face_analysis = Column(JSON, nullable=True, comment="人脸分析数据")
+    simple_analysis = Column(JSON, nullable=True, comment="简化人脸分析数据")
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, comment="创建时间")
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间")
 
@@ -26,6 +27,7 @@ class User(Base):
             "photo_path": self.photo_path,
             "photo_mime_type": self.photo_mime_type,
             "face_analysis": self.face_analysis,
+            "simple_analysis": self.simple_analysis,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }

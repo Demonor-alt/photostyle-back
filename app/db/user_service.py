@@ -90,7 +90,7 @@ def get_user_profile(username: str) -> dict:
         db.close()
 
 
-def upsert_user_photo(username: str, photo_path: str, photo_mime_type: str | None = None, face_analysis: dict | None = None) -> dict:
+def upsert_user_photo(username: str, photo_path: str, photo_mime_type: str | None = None, face_analysis: dict | None = None, simple_analysis: dict | None = None) -> dict:
     """保存或更新用户照片"""
     db = SessionLocal()
     try:
@@ -101,6 +101,7 @@ def upsert_user_photo(username: str, photo_path: str, photo_mime_type: str | Non
         user.photo_path = photo_path
         user.photo_mime_type = photo_mime_type
         user.face_analysis = face_analysis
+        user.simple_analysis = simple_analysis
         
         db.commit()
         db.refresh(user)
@@ -116,7 +117,8 @@ def update_user_profile(
     password: str | None = None, 
     photo_path: str | None = None, 
     photo_mime_type: str | None = None, 
-    face_analysis: dict | None = None
+    face_analysis: dict | None = None,
+    simple_analysis: dict | None = None
 ) -> dict:
     """更新用户资料"""
     db = SessionLocal()
@@ -139,6 +141,8 @@ def update_user_profile(
             user.photo_mime_type = photo_mime_type
         if face_analysis is not None:
             user.face_analysis = face_analysis
+        if simple_analysis is not None:
+            user.simple_analysis = simple_analysis
         
         db.commit()
         db.refresh(user)
@@ -157,7 +161,8 @@ def get_user_photo_payload(username: str) -> dict | None:
         return {
             "photo_path": user.photo_path,
             "photo_mime_type": user.photo_mime_type,
-            "face_analysis": user.face_analysis
+            "face_analysis": user.face_analysis,
+            "simple_analysis": user.simple_analysis
         }
     finally:
         db.close()
