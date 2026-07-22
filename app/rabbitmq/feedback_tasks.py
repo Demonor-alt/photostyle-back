@@ -14,8 +14,8 @@ from app.db.user_mapper import get_user_profile_by_id  # 导入用户信息查�
 from app.rag.vector_writing import upsert_photo_style_embedding  # 导入图片风格嵌入更新函数
 from app.utils.runtime import logger  # 导入日志记录器
 
-_RABBITMQ_URL = os.getenv("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/%2F")  # RabbitMQ连接URL，默认使用本地服务器
-_FEEDBACK_QUEUE = os.getenv("RABBITMQ_FEEDBACK_QUEUE", "photo_style.feedback.updated")  # 反馈队列名称，默认使用指定名称
+_RABBITMQ_URL = os.getenv("RABBITMQ_URL")  # RabbitMQ连接URL
+_FEEDBACK_QUEUE = os.getenv("RABBITMQ_FEEDBACK_QUEUE")  # 反馈队列名称
 
 
 def _open_connection() -> pika.BlockingConnection:  # 定义打开RabbitMQ连接的内部函数，返回阻塞连接对象
@@ -30,16 +30,32 @@ def _declare_feedback_queue(channel: Any) -> None:  # 定义声明反馈队列�
 
 
 def publish_feedback_updated(history_id: int) -> None:  # 定义发布反馈更新消息的公共函数，接收历史记录ID参数
+    logger.info("feedback.publish.start history_id=%s", history_id)  # 记录开始发布操作
+    
     message = {  # 创建消息内容字典
         "history_id": history_id,  # 历史记录ID
         "event": "feedback.updated",  # 事件类型
         "created_at": int(time.time()),  # 消息创建时间戳
     }
+    logger.info("feedback.publish.message_created history_id=%s message=%s", history_id, message)  # 记录消息创建完成
+    
     body = json.dumps(message, ensure_ascii=False).encode("utf-8")  # 将消息转换为JSON字符串并编码为UTF-8字节
+    logger.debug("feedback.publish.message_encoded history_id=%s size=%s bytes", history_id, len(body))  # 记录消息编码完成
+    
+    logger.info("feedback.publish.connecting queue=%s", _FEEDBACK_QUEUE)  # 记录开始连接RabbitMQ
     connection = _open_connection()  # 打开RabbitMQ连接
+    logger.info("feedback.publish.connected history_id=%s", history_id)  # 记录连接成功
+    
     try:  # 尝试执行消息发布操作
+        logger.info("feedback.publish.channel_creating history_id=%s", history_id)  # 记录开始创建通道
         channel = connection.channel()  # 创建通道
+        logger.info("feedback.publish.channel_created history_id=%s", history_id)  # 记录通道创建成功
+        
+        logger.info("feedback.publish.queue_declaring history_id=%s queue=%s", history_id, _FEEDBACK_QUEUE)  # 记录开始声明队列
         _declare_feedback_queue(channel)  # 声明反馈队列
+        logger.info("feedback.publish.queue_declared history_id=%s", history_id)  # 记录队列声明成功
+        
+        logger.info("feedback.publish.publishing history_id=%s queue=%s", history_id, _FEEDBACK_QUEUE)  # 记录开始发布消息
         channel.basic_publish(  # 发布消息到队列
             exchange="",  # 使用默认交换机
             routing_key=_FEEDBACK_QUEUE,  # 路由键为队列名称
@@ -50,8 +66,13 @@ def publish_feedback_updated(history_id: int) -> None:  # 定义发布反馈更�
             ),
         )
         logger.info("feedback.task.published history_id=%s queue=%s", history_id, _FEEDBACK_QUEUE)  # 记录消息发布日志
+    except Exception as exc:  # 捕获发布过程中的异常
+        logger.exception("feedback.publish.failed history_id=%s error=%s", history_id, str(exc))  # 记录发布失败
+        raise  # 重新抛出异常
     finally:  # 无论是否发生异常，都执行以下代码
+        logger.info("feedback.publish.closing_connection history_id=%s", history_id)  # 记录开始关闭连接
         connection.close()  # 关闭连接
+        logger.info("feedback.publish.connection_closed history_id=%s", history_id)  # 记录连接关闭完成
 
 
 def handle_feedback_updated(history_id: int) -> None:  # 定义处理反馈更新事件的函数，接收历史记录ID参数

@@ -168,5 +168,13 @@ async def update_history(history_id: int, payload: FeedbackUpdateRequest) -> Mes
         payload.pose_rating,  # 传入姿势评分
         payload.feedback_comment,  # 传入点评内容
     )  # 更新结束
-    publish_feedback_updated(history_id)  # 将后续向量写入等操作交给 RabbitMQ 消费者异步执行
+    
+    logger.info("feedback.update.publishing history_id=%s", history_id)  # 记录开始发布反馈更新事件
+    try:
+        publish_feedback_updated(history_id)  # 将后续向量写入等操作交给 RabbitMQ 消费者异步执行
+        logger.info("feedback.update.published history_id=%s", history_id)  # 记录成功发布事件
+    except Exception as exc:
+        logger.exception("feedback.update.publish_failed history_id=%s, error=%s", history_id, str(exc))
+        raise FeedbackError(hint=f"发布反馈更新事件失败: {exc}") from exc
+    
     return MessageResponse(message="点评保存成功")
