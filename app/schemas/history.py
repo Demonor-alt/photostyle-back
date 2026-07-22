@@ -57,6 +57,7 @@ class SuggestResponse(BaseSchema):  # 定义拍照建议响应模型
 
 
 class HistoryRecord(BaseSchema):  # 定义历史记录模型
+    id: Optional[int] = None  # 历史记录ID
     user_id: int  # 用户ID
     input_data: dict  # 输入数据（不再绑定SuggestRequest）
     output_data: dict  # 输出数据（支持旧格式和新格式）
@@ -65,6 +66,7 @@ class HistoryRecord(BaseSchema):  # 定义历史记录模型
     pose_rating: int = 0  # 姿势评分
     feedback_comment: Optional[str] = None  # 点评内容
     reviewed: bool = False  # 是否已点评
+    created_at: Optional[str] = None  # 创建时间
 
 
 class DatabaseStatusResponse(BaseSchema):  # 定义数据库状态响应模型
