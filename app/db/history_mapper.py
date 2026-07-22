@@ -37,8 +37,8 @@ def _ensure_review_payload(record: dict) -> dict:
     }
 
 
-def save_history_record(record: dict) -> None:
-    """保存历史记录"""
+def save_history_record(record: dict) -> dict:
+    """保存历史记录并返回新增记录"""
     db = SessionLocal()
     try:
         review_payload = _ensure_review_payload(record)
@@ -50,6 +50,8 @@ def save_history_record(record: dict) -> None:
         )
         db.add(history)
         db.commit()
+        db.refresh(history)
+        return history.to_dict()
     finally:
         db.close()
 

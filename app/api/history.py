@@ -29,7 +29,7 @@ from app.db.history_mapper import (  # 引入历史数据服务
     save_history_record,
     update_history_feedback,
 )
-from app.db.user_mapper import get_user_profile_by_id  # 引入用户查询服务
+from app.db.user_mapper import get_user_profile, get_user_profile_by_id  # 引入用户查询服务
 from app.rag.vector_writing import upsert_photo_style_embedding  # 引入RAG向量服务
 from app.api.utils import save_upload_file, parse_tag_list  # 引入工具函数
 
@@ -76,7 +76,7 @@ async def suggest(  # 定义支持表单上传的建议接口
         input_data.pop("username", None)
         input_data["extra_tags"] = []
 
-        save_history_record({
+        history = save_history_record({
             "user_id": user["id"],
             "input_data": input_data,
             "output_data": result.model_dump(),
@@ -90,7 +90,7 @@ async def suggest(  # 定义支持表单上传的建议接口
         logger.exception("suggest.history.save_failed")
         raise HistorySaveError(hint=str(exc)) from exc
     
-    return SuggestApiResponse(data=result)
+    return SuggestApiResponse(data={**result.model_dump(), "history": history})
 
 
 # @router.post("/suggest/stream")  # 定义流式建议生成接口
