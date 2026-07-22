@@ -127,17 +127,13 @@ CREATE DATABASE photostyle;
 CREATE DATABASE photostyle CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-#### 运行迁移脚本
-
-```bash
-python migrate_to_orm.py
-```
-
 ### 4. 启动服务
 
 ```bash
 # 开发模式
 python app/main.py
+python -m app.rabbitmq.feedback_worker
+docker run -d   --name photostyle-rabbitmq   --hostname photostyle-rabbitmq   --restart unless-stopped   -p 5672:5672   -p 15672:15672   -v /data/docker/rabbitmq/data:/var/lib/rabbitmq   -v /data/docker/rabbitmq/log:/var/log/rabbitmq   -e RABBITMQ_DEFAULT_USER=photostyle   -e RABBITMQ_DEFAULT_PASS='123456'   rabbitmq:3.13-management
 ```
 
 服务启动后访问：
@@ -173,132 +169,4 @@ back/
 ├── .env.example             # 环境变量示例
 ├── requirements.txt         # Python 依赖
 └── README.md               # 本文件
-```
-
-## API 文档
-
-### 认证相关
-
-#### 注册用户
-```http
-POST /api/auth/register
-Content-Type: application/json
-
-{
-  "username": "user123",
-  "password": "password123"
-}
-```
-
-#### 用户登录
-```http
-POST /api/auth/login
-Content-Type: application/json
-
-{
-  "username": "user123",
-  "password": "password123"
-}
-```
-
-#### 获取当前用户信息
-```http
-GET /api/auth/me?username=user123
-```
-
-### 照片管理
-
-#### 上传照片
-```http
-POST /api/photos/upload
-Content-Type: multipart/form-data
-
-username: user123
-image: <file>
-```
-
-#### 预览照片
-```http
-GET /api/photos/preview?path=/path/to/image.jpg
-```
-
-### 建议生成
-
-#### 生成拍照建议（同步）
-```http
-POST /api/suggest
-Content-Type: multipart/form-data
-
-username: user123
-style: 街拍
-location: 城市街道
-time: 傍晚
-weather: 晴天
-face_tags: ["瓜子脸", "丹凤眼"]
-shot_tags: ["半身照"]
-pose_tags: ["自然站姿"]
-extra_tags: []
-image: <file> (可选)
-```
-
-#### 生成拍照建议（流式 SSE）
-```http
-POST /api/suggest/stream
-Content-Type: multipart/form-data
-
-(参数同上)
-```
-
-SSE 事件格式：
-```
-event: status
-data: {"message": "started"}
-
-event: chunk
-data: {"step": "rag", "result": {...}}
-
-event: done
-data: {"message": "completed"}
-```
-
-### 历史记录
-
-#### 保存历史记录
-```http
-POST /api/history
-Content-Type: application/json
-
-{
-  "input_data": {...},
-  "output_data": {...},
-  "liked": false,
-  "shot_success": false
-}
-```
-
-#### 查询历史记录
-```http
-GET /api/history
-```
-
-### 反馈
-
-#### 提交用户反馈
-```http
-POST /api/feedback
-Content-Type: application/json
-
-{
-  "liked": true,
-  "shot_success": true,
-  "input_data": {...},
-  "output_data": {...}
-}
-```
-
-### 系统状态
-
-#### 数据库状态检查
-```http
-GET /api/db/status
 ```

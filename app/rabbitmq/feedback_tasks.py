@@ -30,32 +30,24 @@ def _declare_feedback_queue(channel: Any) -> None:  # 定义声明反馈队列�
 
 
 def publish_feedback_updated(history_id: int) -> None:  # 定义发布反馈更新消息的公共函数，接收历史记录ID参数
-    logger.info("feedback.publish.start history_id=%s", history_id)  # 记录开始发布操作
-    
     message = {  # 创建消息内容字典
         "history_id": history_id,  # 历史记录ID
         "event": "feedback.updated",  # 事件类型
         "created_at": int(time.time()),  # 消息创建时间戳
-    }
-    logger.info("feedback.publish.message_created history_id=%s message=%s", history_id, message)  # 记录消息创建完成
-    
+    }    
     body = json.dumps(message, ensure_ascii=False).encode("utf-8")  # 将消息转换为JSON字符串并编码为UTF-8字节
-    logger.debug("feedback.publish.message_encoded history_id=%s size=%s bytes", history_id, len(body))  # 记录消息编码完成
+    logger.debug("消息编码完成:feedback.publish.message_encoded history_id=%s size=%s bytes", history_id, len(body))
     
-    logger.info("feedback.publish.connecting queue=%s", _FEEDBACK_QUEUE)  # 记录开始连接RabbitMQ
     connection = _open_connection()  # 打开RabbitMQ连接
-    logger.info("feedback.publish.connected history_id=%s", history_id)  # 记录连接成功
+    logger.info("RabbitMQ连接成功:feedback.publish.connected history_id=%s", history_id)
     
     try:  # 尝试执行消息发布操作
-        logger.info("feedback.publish.channel_creating history_id=%s", history_id)  # 记录开始创建通道
         channel = connection.channel()  # 创建通道
-        logger.info("feedback.publish.channel_created history_id=%s", history_id)  # 记录通道创建成功
+        logger.info("通道创建成功:feedback.publish.channel_created history_id=%s", history_id)
         
-        logger.info("feedback.publish.queue_declaring history_id=%s queue=%s", history_id, _FEEDBACK_QUEUE)  # 记录开始声明队列
         _declare_feedback_queue(channel)  # 声明反馈队列
-        logger.info("feedback.publish.queue_declared history_id=%s", history_id)  # 记录队列声明成功
+        logger.info("队列声明成功:feedback.publish.queue_declared history_id=%s", history_id)
         
-        logger.info("feedback.publish.publishing history_id=%s queue=%s", history_id, _FEEDBACK_QUEUE)  # 记录开始发布消息
         channel.basic_publish(  # 发布消息到队列
             exchange="",  # 使用默认交换机
             routing_key=_FEEDBACK_QUEUE,  # 路由键为队列名称
@@ -65,24 +57,20 @@ def publish_feedback_updated(history_id: int) -> None:  # 定义发布反馈更�
                 content_type="application/json",  # 设置内容类型为JSON
             ),
         )
-        logger.info("feedback.task.published history_id=%s queue=%s", history_id, _FEEDBACK_QUEUE)  # 记录消息发布日志
+        logger.info("消息发布成功：feedback.task.published history_id=%s queue=%s", history_id, _FEEDBACK_QUEUE)
     except Exception as exc:  # 捕获发布过程中的异常
-        logger.exception("feedback.publish.failed history_id=%s error=%s", history_id, str(exc))  # 记录发布失败
+        logger.exception("feedback.publish.failed history_id=%s error=%s", history_id, str(exc))
         raise  # 重新抛出异常
     finally:  # 无论是否发生异常，都执行以下代码
-        logger.info("feedback.publish.closing_connection history_id=%s", history_id)  # 记录开始关闭连接
         connection.close()  # 关闭连接
-        logger.info("feedback.publish.connection_closed history_id=%s", history_id)  # 记录连接关闭完成
+        logger.info("连接关闭成功:feedback.publish.connection_closed history_id=%s", history_id)
 
 
 def handle_feedback_updated(history_id: int) -> None:  # 定义处理反馈更新事件的函数，接收历史记录ID参数
     current_history = get_history_record(history_id)  # 获取历史记录信息
     user_id = int(current_history["user_id"])  # 从历史记录中提取用户ID并转换为整数
-    user = get_user_profile_by_id(user_id)  # 根据用户ID获取用户信息
-    embedding_payload = upsert_photo_style_embedding(history_id, user_id)  # 更新图片风格嵌入向量
-    logger.info("feedback.embedding.saved=%s", embedding_payload["metadata"])  # 记录嵌入保存成功的日志
-    if user.get("simple_analysis") is not None:  # 检查用户是否有简单分析结果
-        logger.info("feedback.user.simple_analysis.ready user_id=%s", user["id"])  # 记录用户分析准备好的日志
+    embedding_payload = upsert_photo_style_embedding(history_id, user_id)  # 保存向量到知识库中
+    logger.info(" 向量保存成功：feedback.embedding.saved=%s", embedding_payload["metadata"])
 
 
 def consume_feedback_tasks() -> None:  # 定义消费反馈任务的函数，用于持续监听队列并处理消息
@@ -98,11 +86,11 @@ def consume_feedback_tasks() -> None:  # 定义消费反馈任务的函数，用
             handle_feedback_updated(history_id)  # 处理反馈更新事件
             ch.basic_ack(delivery_tag=method.delivery_tag)  # 确认消息处理成功
         except Exception:  # 捕获所有异常
-            logger.exception("feedback.task.failed body=%s", body.decode("utf-8", errors="replace"))  # 记录失败日志
+            logger.exception("feedback.task.failed body=%s", body.decode("utf-8", errors="replace"))
             ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)  # 拒绝消息且不重新入队
 
     channel.basic_consume(queue=_FEEDBACK_QUEUE, on_message_callback=on_message)  # 开始消费队列消息
-    logger.info("feedback.consumer.started queue=%s", _FEEDBACK_QUEUE)  # 记录消费者启动日志
+    logger.info("消费者启动：feedback.consumer.started queue=%s", _FEEDBACK_QUEUE)
     try:  # 尝试启动消息消费
         channel.start_consuming()  # 开始持续消费消息
     except KeyboardInterrupt:  # 捕获键盘中断异常（Ctrl+C）
