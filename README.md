@@ -134,6 +134,12 @@ CREATE DATABASE photostyle CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 python app/main.py
 python -m app.rabbitmq.feedback_worker
 docker run -d   --name photostyle-rabbitmq   --hostname photostyle-rabbitmq   --restart unless-stopped   -p 5672:5672   -p 15672:15672   -v /data/docker/rabbitmq/data:/var/lib/rabbitmq   -v /data/docker/rabbitmq/log:/var/log/rabbitmq   -e RABBITMQ_DEFAULT_USER=photostyle   -e RABBITMQ_DEFAULT_PASS='123456'   rabbitmq:3.13-management
+docker run -d   --name milvus-standalone   --restart unless-stopped   -p 19530:19530   -p 9091:9091   -v /data/docker/milvus/data:/var/lib/milvus   -v /data/docker/milvus/log:/var/log/milvus   -v /data/docker/milvus/conf:/milvus/configs   milvusdb/milvus:v2.4.6   milvus run standalone
+docker run -d \
+  --name attu \
+  --restart unless-stopped \
+  -p 3000:3000 \
+  zilliz/attu:latest
 ```
 
 服务启动后访问：

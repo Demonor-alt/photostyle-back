@@ -2,8 +2,3 @@
 logs/
 uploads/
 __pycache__
-
-# Milvus 数据文件
-milvus_data/
-milvus_demo.db
-*.db
