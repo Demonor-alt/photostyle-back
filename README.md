@@ -114,11 +114,6 @@ DATABASE_URL=postgresql://user:password@localhost:5432/photostyle
 ```bash
 # 创建数据库
 createdb photostyle
-
-# 或使用 psql
-psql -U postgres
-CREATE DATABASE photostyle;
-\q
 ```
 
 #### MySQL
@@ -134,12 +129,23 @@ CREATE DATABASE photostyle CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 python app/main.py
 python -m app.rabbitmq.feedback_worker
 docker run -d   --name photostyle-rabbitmq   --hostname photostyle-rabbitmq   --restart unless-stopped   -p 5672:5672   -p 15672:15672   -v /data/docker/rabbitmq/data:/var/lib/rabbitmq   -v /data/docker/rabbitmq/log:/var/log/rabbitmq   -e RABBITMQ_DEFAULT_USER=photostyle   -e RABBITMQ_DEFAULT_PASS='123456'   rabbitmq:3.13-management
-docker run -d   --name milvus-standalone   --restart unless-stopped   -p 19530:19530   -p 9091:9091   -v /data/docker/milvus/data:/var/lib/milvus   -v /data/docker/milvus/log:/var/log/milvus   -v /data/docker/milvus/conf:/milvus/configs   milvusdb/milvus:v2.4.6   milvus run standalone
+docker run -d \
+  --name milvus-standalone \
+  --restart unless-stopped \
+  --network photo \
+  -p 19530:19530 \
+  -p 9091:9091 \
+  -v /data/docker/milvus/data:/var/lib/milvus \
+  -v /data/docker/milvus/log:/var/log/milvus \
+  -v /data/docker/milvus/conf:/milvus/configs \
+  milvusdb/milvus:v2.4.6 \
+  milvus run standalone
 docker run -d \
   --name attu \
   --restart unless-stopped \
+  --network photo \
   -p 3000:3000 \
-  zilliz/attu:latest
+  zilliz/attu:v2.4.12
 ```
 
 服务启动后访问：
