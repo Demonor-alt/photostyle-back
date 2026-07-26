@@ -20,8 +20,8 @@ _FEEDBACK_QUEUE = os.getenv("RABBITMQ_FEEDBACK_QUEUE")  # 反馈队列名称
 
 def _open_connection() -> pika.BlockingConnection:  # 定义打开RabbitMQ连接的内部函数，返回阻塞连接对象
     params = pika.URLParameters(_RABBITMQ_URL)  # 解析RabbitMQ URL参数
-    params.heartbeat = int(os.getenv("RABBITMQ_HEARTBEAT", "60"))  # 设置心跳间隔，默认60秒
-    params.blocked_connection_timeout = int(os.getenv("RABBITMQ_BLOCKED_TIMEOUT", "30"))  # 设置连接阻塞超时时间，默认30秒
+    params.heartbeat = int(os.getenv("RABBITMQ_HEARTBEAT", "600"))  # 设置心跳间隔，默认600秒，避免长耗时向量写入期间连接被关闭
+    params.blocked_connection_timeout = int(os.getenv("RABBITMQ_BLOCKED_TIMEOUT", "300"))  # 设置连接阻塞超时时间，默认300秒
     return pika.BlockingConnection(params)  # 创建并返回阻塞连接
 
 
@@ -84,10 +84,19 @@ def consume_feedback_tasks() -> None:  # 定义消费反馈任务的函数，用
             payload = json.loads(body.decode("utf-8"))  # 解码并解析消息体为JSON
             history_id = int(payload["history_id"])  # 从消息中提取历史记录ID
             handle_feedback_updated(history_id)  # 处理反馈更新事件
-            ch.basic_ack(delivery_tag=method.delivery_tag)  # 确认消息处理成功
-        except Exception:  # 捕获所有异常
+            if ch.is_open:
+                ch.basic_ack(delivery_tag=method.delivery_tag)  # 确认消息处理成功
+            else:
+                logger.warning("feedback.task.ack_skipped_channel_closed body=%s", body.decode("utf-8", errors="replace"))
+        except AMQPError:
+            logger.exception("feedback.task.amqp_error body=%s", body.decode("utf-8", errors="replace"))
+            raise
+        except Exception:  # 捕获业务处理异常
             logger.exception("feedback.task.failed body=%s", body.decode("utf-8", errors="replace"))
-            ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)  # 拒绝消息且不重新入队
+            if ch.is_open:
+                ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)  # 拒绝消息且不重新入队
+            else:
+                logger.warning("feedback.task.nack_skipped_channel_closed body=%s", body.decode("utf-8", errors="replace"))
 
     channel.basic_consume(queue=_FEEDBACK_QUEUE, on_message_callback=on_message)  # 开始消费队列消息
     logger.info("消费者启动：feedback.consumer.started queue=%s", _FEEDBACK_QUEUE)

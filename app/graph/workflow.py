@@ -7,7 +7,9 @@ LangGraph工作流模块
 from __future__ import annotations
 
 import logging
-from typing import TypedDict, NotRequired, Any
+from typing import TypedDict, Any
+
+from typing_extensions import NotRequired
 
 from app.schemas.history import SuggestRequest
 from app.services.llm.qwen_suggest_client import generate_suggestion
