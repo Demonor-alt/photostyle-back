@@ -6,6 +6,32 @@
 
 - [RabbitMQ 反馈任务机制](#rabbitmq-反馈任务机制)
 
+## 整体数据流
+
+```text
+
+用户生成推荐建议
+        ↓
+history 表保存 input_data / output_data / feedback / score
+        ↓
+用户提交反馈后，RabbitMQ 异步触发向量写入任务
+        ↓
+读取 history 记录 + user_profile 长相分析
+        ↓
+构建一段用于 Embedding 的文本
+        ↓
+使用 BAAI/bge-base-zh-v1.5 生成向量
+        ↓
+写入 Milvus collection: photo_style_embeddings
+        ↓
+后续推荐时，用当前 query 做向量检索
+        ↓
+按 user_id、doc_type、评分、风格等过滤
+        ↓
+召回历史记忆
+
+```
+
 ## RAG 向量记忆机制
 
 RAG 相关代码位于 `app/rag/`，主要包含：
@@ -92,6 +118,30 @@ app/rag/
 
 | `metadata` | JSON | 完整业务元数据和调试信息 |
 
+```python
+
+metadata = {
+    "history_id": history_id,
+    "doc_type": "history_feedback",
+    "time": input_data["time"],
+    "style": input_data["style"],
+    "weather": input_data["weather"],
+    "location": input_data["location"],
+    "tags": tags,
+    "avg_score": avg_score,
+    "is_positive_feedback": avg_score >= 4.0,
+    "created_at": history["created_at"],
+    "updated_at": 当前时间,
+    "input_data": input_data,
+    "output_data": output_data,
+    "feedback_comment": history["feedback_comment"],
+    "simple_analysis": user_profile["simple_analysis"],
+    "source": "history_feedback",
+    "embedding_model": 当前 embedding 模型名,
+}
+
+```
+
 索引设计：
 
 - `embedding`: HNSW，`metric_type=COSINE`，`M=16`，`efConstruction=200`
@@ -99,6 +149,11 @@ app/rag/
 - `history_id`: 标量索引
 
 - `user_id`: 标量索引
+
+HNSW：适合中小规模、高质量近似最近邻检索
+COSINE：使用余弦相似度
+M=16：图结构连边数量，越大召回越好但内存更高
+efConstruction=200：建索引质量参数，越大构建越慢但质量更好
 
 ### 3. 向量检索
 
