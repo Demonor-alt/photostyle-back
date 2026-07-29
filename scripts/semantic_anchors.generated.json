@@ -1,0 +1,1178 @@
+{
+  "generated_at": "2026-07-27T14:46:45.770702+00:00",
+  "config_path": "D:\\project\\PhotoStyle\\back\\scripts\\semantic_axes.yaml",
+  "samples_per_axis": 15,
+  "anchor_count": 195,
+  "anchors": [
+    {
+      "text": "我超爱多巴胺穿搭，颜色越鲜艳越好",
+      "axis_name": "color_saturation",
+      "axis_value": 0.9,
+      "category": "用户喜欢表达"
+    },
+    {
+      "text": "莫兰迪色系是我的最爱，温柔又高级",
+      "axis_name": "color_saturation",
+      "axis_value": -0.8,
+      "category": "用户喜欢表达"
+    },
+    {
+      "text": "别给我推荐那些荧光色，太扎眼了",
+      "axis_name": "color_saturation",
+      "axis_value": -0.7,
+      "category": "用户拒绝表达"
+    },
+    {
+      "text": "拒绝高饱和，我穿不了那么亮的颜色",
+      "axis_name": "color_saturation",
+      "axis_value": -0.8,
+      "category": "用户拒绝表达"
+    },
+    {
+      "text": "我不喜欢大红大绿的衣服，看着太土了",
+      "axis_name": "color_saturation",
+      "axis_value": -0.7,
+      "category": "用户拒绝表达"
+    },
+    {
+      "text": "穿得太花里胡哨的我驾驭不了",
+      "axis_name": "color_saturation",
+      "axis_value": -0.6,
+      "category": "口语表达"
+    },
+    {
+      "text": "那种奶油色的毛衣看着就舒服",
+      "axis_name": "color_saturation",
+      "axis_value": -0.6,
+      "category": "口语表达"
+    },
+    {
+      "text": "想要那种撞色设计的卫衣，穿着有个性",
+      "axis_name": "color_saturation",
+      "axis_value": 0.8,
+      "category": "口语表达"
+    },
+    {
+      "text": "我衣柜里全是黑白灰基础款，怎么搭都不出错",
+      "axis_name": "color_saturation",
+      "axis_value": 0.0,
+      "category": "隐含表达"
+    },
+    {
+      "text": "日常通勤穿得太鲜艳不太合适吧",
+      "axis_name": "color_saturation",
+      "axis_value": -0.5,
+      "category": "隐含表达"
+    },
+    {
+      "text": "最近流行的美拉德配色挺适合我的",
+      "axis_name": "color_saturation",
+      "axis_value": -0.4,
+      "category": "隐含表达"
+    },
+    {
+      "text": "周末去海边拍照想穿得亮眼一点",
+      "axis_name": "color_saturation",
+      "axis_value": 0.7,
+      "category": "场景表达"
+    },
+    {
+      "text": "参加婚礼想穿得喜庆一点，红色橘色都行",
+      "axis_name": "color_saturation",
+      "axis_value": 0.6,
+      "category": "场景表达"
+    },
+    {
+      "text": "年会想穿得有气场一些，颜色醒目一点",
+      "axis_name": "color_saturation",
+      "axis_value": 0.7,
+      "category": "场景表达"
+    },
+    {
+      "text": "燕麦色的大衣有吗？就喜欢这种低饱和的感觉",
+      "axis_name": "color_saturation",
+      "axis_value": -0.7,
+      "category": "口语表达"
+    },
+    {
+      "text": "我完全受不了身上有任何多余的首饰，连个戒指都不想戴。",
+      "axis_name": "accessory_level",
+      "axis_value": -1.0,
+      "category": "用户拒绝表达"
+    },
+    {
+      "text": "别给我搭那些层叠的项链和夸张的大耳环，看着太累赘了。",
+      "axis_name": "accessory_level",
+      "axis_value": -0.8,
+      "category": "用户拒绝表达"
+    },
+    {
+      "text": "我不喜欢戴帽子，也不喜欢发饰，头发自然散着就行，别加多余的东西。",
+      "axis_name": "accessory_level",
+      "axis_value": -0.6,
+      "category": "用户拒绝表达"
+    },
+    {
+      "text": "平时出门随便套个衣服就走，最烦戴一堆零零碎碎的配饰，麻烦。",
+      "axis_name": "accessory_level",
+      "axis_value": -0.5,
+      "category": "口语表达"
+    },
+    {
+      "text": "我偏爱那种清冷极简风，全身上下除了手表没有任何多余的金属件。",
+      "axis_name": "accessory_level",
+      "axis_value": -0.3,
+      "category": "隐含表达"
+    },
+    {
+      "text": "如果是日常通勤，我一般只戴一副小巧的耳钉，其他首饰都不怎么戴。",
+      "axis_name": "accessory_level",
+      "axis_value": 0.0,
+      "category": "场景表达"
+    },
+    {
+      "text": "衣服太素的话，我会随便搭一条细项链点缀一下，不用太复杂。",
+      "axis_name": "accessory_level",
+      "axis_value": 0.1,
+      "category": "口语表达"
+    },
+    {
+      "text": "整体造型讲究干净利落，偶尔用一块质感好的腕表或简单的胸针提提气。",
+      "axis_name": "accessory_level",
+      "axis_value": 0.2,
+      "category": "隐含表达"
+    },
+    {
+      "text": "周末去逛街拍照的话，我会特意搭配一顶好看的帽子和一副墨镜来凹造型。",
+      "axis_name": "accessory_level",
+      "axis_value": 0.5,
+      "category": "场景表达"
+    },
+    {
+      "text": "我很喜欢用各种精致的发带和耳环来丰富整体的穿搭层次感。",
+      "axis_name": "accessory_level",
+      "axis_value": 0.6,
+      "category": "用户喜欢表达"
+    },
+    {
+      "text": "穿基础款的时候必须得靠叠戴项链和夸张点的耳环来撑场面，不然太单调了。",
+      "axis_name": "accessory_level",
+      "axis_value": 0.7,
+      "category": "口语表达"
+    },
+    {
+      "text": "我是重度首饰控，戒指、手链、项链必须叠戴，越有金属感和存在感越好。",
+      "axis_name": "accessory_level",
+      "axis_value": 0.8,
+      "category": "用户喜欢表达"
+    },
+    {
+      "text": "我的穿搭总是充满细节，从头上的复古发饰到手腕上的多层手链，每一处都得精心装饰。",
+      "axis_name": "accessory_level",
+      "axis_value": 0.8,
+      "category": "隐含表达"
+    },
+    {
+      "text": "参加晚宴或者派对的时候，我一定会戴上华丽的珍珠项链和闪耀的钻石耳环，全套配齐。",
+      "axis_name": "accessory_level",
+      "axis_value": 0.9,
+      "category": "场景表达"
+    },
+    {
+      "text": "我超级热爱各种配饰，包包、帽子、丝巾、墨镜、首饰全都要安排上，造型必须丰富华丽！",
+      "axis_name": "accessory_level",
+      "axis_value": 1.0,
+      "category": "用户喜欢表达"
+    },
+    {
+      "text": "我想要那种看不出化妆的伪素颜感",
+      "axis_name": "makeup_intensity",
+      "axis_value": -0.8,
+      "category": "用户喜欢表达"
+    },
+    {
+      "text": "千万别给我搞那种大白墙一样的厚底妆",
+      "axis_name": "makeup_intensity",
+      "axis_value": -0.9,
+      "category": "用户拒绝表达"
+    },
+    {
+      "text": "随便化个日常淡妆，提一下气色就行",
+      "axis_name": "makeup_intensity",
+      "axis_value": -0.1,
+      "category": "口语表达"
+    },
+    {
+      "text": "今天去蹦迪，给我整一个最闪的烟熏妆和大红唇",
+      "axis_name": "makeup_intensity",
+      "axis_value": 0.9,
+      "category": "场景表达"
+    },
+    {
+      "text": "妆容不要太有存在感，干净自然最好",
+      "axis_name": "makeup_intensity",
+      "axis_value": -0.3,
+      "category": "用户喜欢表达"
+    },
+    {
+      "text": "帮我画个正宗的欧美截断式眼妆，修容打重一点",
+      "axis_name": "makeup_intensity",
+      "axis_value": 0.9,
+      "category": "用户喜欢表达"
+    },
+    {
+      "text": "我不喜欢脸上粉感太重，要那种清透的水光肌",
+      "axis_name": "makeup_intensity",
+      "axis_value": -0.7,
+      "category": "用户拒绝表达"
+    },
+    {
+      "text": "拍结婚证照片，妆面稍微干净得体一点就好",
+      "axis_name": "makeup_intensity",
+      "axis_value": -0.1,
+      "category": "场景表达"
+    },
+    {
+      "text": "眼线和睫毛稍微带一下，不要画那种夸张的猫眼",
+      "axis_name": "makeup_intensity",
+      "axis_value": -0.4,
+      "category": "隐含表达"
+    },
+    {
+      "text": "我要那种气场全开的舞台妆，五官轮廓必须立体",
+      "axis_name": "makeup_intensity",
+      "axis_value": 0.8,
+      "category": "用户喜欢表达"
+    },
+    {
+      "text": "口红颜色淡一点，豆沙色或者裸色就行，别搞正红",
+      "axis_name": "makeup_intensity",
+      "axis_value": -0.6,
+      "category": "口语表达"
+    },
+    {
+      "text": "底妆稍微遮一下瑕疵，保留一点皮肤本身的质感",
+      "axis_name": "makeup_intensity",
+      "axis_value": -0.5,
+      "category": "隐含表达"
+    },
+    {
+      "text": "今天有晚宴，帮我做一个精致华丽的全妆，红唇安排上",
+      "axis_name": "makeup_intensity",
+      "axis_value": 0.7,
+      "category": "场景表达"
+    },
+    {
+      "text": "不要那种网红大浓妆，看着太假了",
+      "axis_name": "makeup_intensity",
+      "axis_value": -0.8,
+      "category": "用户拒绝表达"
+    },
+    {
+      "text": "稍微扫点腮红和散粉，看起来有精神就行",
+      "axis_name": "makeup_intensity",
+      "axis_value": -0.2,
+      "category": "口语表达"
+    },
+    {
+      "text": "我要那种很自然的抓拍感觉，不要看镜头",
+      "axis_name": "pose_staged",
+      "axis_value": -0.8,
+      "category": "用户喜欢表达"
+    },
+    {
+      "text": "帮我拍那种杂志封面的大片感，动作要专业一点",
+      "axis_name": "pose_staged",
+      "axis_value": 0.9,
+      "category": "用户喜欢表达"
+    },
+    {
+      "text": "别让我摆那种很僵硬的pose，太假了",
+      "axis_name": "pose_staged",
+      "axis_value": -0.7,
+      "category": "用户拒绝表达"
+    },
+    {
+      "text": "随便走走回头那种，像被路人偷拍的一样",
+      "axis_name": "pose_staged",
+      "axis_value": -0.9,
+      "category": "场景表达"
+    },
+    {
+      "text": "我想要那种强凹造型的废土风，动作张力拉满",
+      "axis_name": "pose_staged",
+      "axis_value": 0.8,
+      "category": "用户喜欢表达"
+    },
+    {
+      "text": "就简单站着就行，不用刻意摆动作",
+      "axis_name": "pose_staged",
+      "axis_value": -0.1,
+      "category": "口语表达"
+    },
+    {
+      "text": "我不想要那种影楼风的摆拍，太做作了",
+      "axis_name": "pose_staged",
+      "axis_value": -0.8,
+      "category": "用户拒绝表达"
+    },
+    {
+      "text": "帮我设计几个有模特感的定点动作",
+      "axis_name": "pose_staged",
+      "axis_value": 0.7,
+      "category": "用户喜欢表达"
+    },
+    {
+      "text": "像平时生活里那样，整理一下头发或者喝口水",
+      "axis_name": "pose_staged",
+      "axis_value": -0.6,
+      "category": "场景表达"
+    },
+    {
+      "text": "动作幅度不用太大，但要有那种精心设计的雕塑感",
+      "axis_name": "pose_staged",
+      "axis_value": 0.8,
+      "category": "隐含表达"
+    },
+    {
+      "text": "千万别让我摆那种网红同款pose，太土了",
+      "axis_name": "pose_staged",
+      "axis_value": -0.6,
+      "category": "用户拒绝表达"
+    },
+    {
+      "text": "要那种松弛感，假装没在拍照",
+      "axis_name": "pose_staged",
+      "axis_value": -0.9,
+      "category": "口语表达"
+    },
+    {
+      "text": "我想要棚拍那种非常严谨的专业姿态",
+      "axis_name": "pose_staged",
+      "axis_value": 0.9,
+      "category": "场景表达"
+    },
+    {
+      "text": "不用太刻意，稍微引导一下我的手脚放哪就行",
+      "axis_name": "pose_staged",
+      "axis_value": 0.1,
+      "category": "隐含表达"
+    },
+    {
+      "text": "给我来点有舞台戏剧张力的定格动作",
+      "axis_name": "pose_staged",
+      "axis_value": 1.0,
+      "category": "用户喜欢表达"
+    },
+    {
+      "text": "我想要那种在草地上奔跑大笑的抓拍，动作幅度越大越好",
+      "axis_name": "body_openness",
+      "axis_value": 0.9,
+      "category": "用户喜欢表达"
+    },
+    {
+      "text": "千万别让我做那种张牙舞爪的动作，太傻了",
+      "axis_name": "body_openness",
+      "axis_value": -0.8,
+      "category": "用户拒绝表达"
+    },
+    {
+      "text": "帮我拍那种四肢完全舒展的舞蹈动作，要有张力",
+      "axis_name": "body_openness",
+      "axis_value": 0.85,
+      "category": "口语表达"
+    },
+    {
+      "text": "我想要那种安静坐着看书的感觉，双手自然交叠在腿上",
+      "axis_name": "body_openness",
+      "axis_value": -0.8,
+      "category": "用户喜欢表达"
+    },
+    {
+      "text": "海边的照片希望是迎风张开双臂拥抱自然的感觉",
+      "axis_name": "body_openness",
+      "axis_value": 0.8,
+      "category": "场景表达"
+    },
+    {
+      "text": "照片里的人最好是低头沉思，身体线条紧凑一点，显得有故事感",
+      "axis_name": "body_openness",
+      "axis_value": -0.7,
+      "category": "隐含表达"
+    },
+    {
+      "text": "就正常的站着或者坐着，不用刻意摆什么大动作",
+      "axis_name": "body_openness",
+      "axis_value": 0.0,
+      "category": "口语表达"
+    },
+    {
+      "text": "我不喜欢动作太夸张的，稍微收敛一点、内敛一点比较好",
+      "axis_name": "body_openness",
+      "axis_value": -0.6,
+      "category": "用户拒绝表达"
+    },
+    {
+      "text": "日常街拍的感觉，动作自然一点，不要太夸张也不要太拘谨",
+      "axis_name": "body_openness",
+      "axis_value": 0.1,
+      "category": "用户喜欢表达"
+    },
+    {
+      "text": "咖啡馆窗边，抱着双臂静静看着外面的侧影，情绪要收着点",
+      "axis_name": "body_openness",
+      "axis_value": -0.75,
+      "category": "场景表达"
+    },
+    {
+      "text": "想要那种跳跃起来或者转圈的动态感，肢体完全打开",
+      "axis_name": "body_openness",
+      "axis_value": 0.95,
+      "category": "用户喜欢表达"
+    },
+    {
+      "text": "我不要那种四肢张得特别开的姿势，感觉太奔放了",
+      "axis_name": "body_openness",
+      "axis_value": -0.7,
+      "category": "用户拒绝表达"
+    },
+    {
+      "text": "普通的全身照，手脚自然下垂或轻微弯曲就行，不用太舒展",
+      "axis_name": "body_openness",
+      "axis_value": -0.1,
+      "category": "隐含表达"
+    },
+    {
+      "text": "夕阳下的剪影，希望是身体完全伸展向上的瑜伽动作",
+      "axis_name": "body_openness",
+      "axis_value": 0.85,
+      "category": "场景表达"
+    },
+    {
+      "text": "喜欢那种把自己裹在毯子里，只露出脸和手的慵懒感",
+      "axis_name": "body_openness",
+      "axis_value": -0.9,
+      "category": "隐含表达"
+    },
+    {
+      "text": "想要那种清冷疏离的感觉，不要太有情绪",
+      "axis_name": "emotion_expression",
+      "axis_value": -0.8,
+      "category": "用户喜欢表达"
+    },
+    {
+      "text": "表情太夸张了，我不喜欢这种大笑的",
+      "axis_name": "emotion_expression",
+      "axis_value": -0.7,
+      "category": "用户拒绝表达"
+    },
+    {
+      "text": "帮我拍得松弛一点，自然一点就好",
+      "axis_name": "emotion_expression",
+      "axis_value": -0.4,
+      "category": "口语表达"
+    },
+    {
+      "text": "不要太用力，稍微收敛一点",
+      "axis_name": "emotion_expression",
+      "axis_value": -0.6,
+      "category": "隐含表达"
+    },
+    {
+      "text": "在安静的咖啡馆里看书那种平和的氛围",
+      "axis_name": "emotion_expression",
+      "axis_value": -0.5,
+      "category": "场景表达"
+    },
+    {
+      "text": "就是那种淡淡的微笑，看着很舒服",
+      "axis_name": "emotion_expression",
+      "axis_value": 0.1,
+      "category": "用户喜欢表达"
+    },
+    {
+      "text": "别让我摆那种很做作、情绪很满的表情",
+      "axis_name": "emotion_expression",
+      "axis_value": -0.3,
+      "category": "用户拒绝表达"
+    },
+    {
+      "text": "随便抓拍，自然笑一下就行",
+      "axis_name": "emotion_expression",
+      "axis_value": 0.0,
+      "category": "口语表达"
+    },
+    {
+      "text": "想要那种有故事感的眼神，带点忧郁和张力",
+      "axis_name": "emotion_expression",
+      "axis_value": 0.6,
+      "category": "隐含表达"
+    },
+    {
+      "text": "在海边夕阳下奔跑，要那种很释放很开心的感觉",
+      "axis_name": "emotion_expression",
+      "axis_value": 0.7,
+      "category": "场景表达"
+    },
+    {
+      "text": "我想要那种极具视觉冲击力和戏剧张力的照片",
+      "axis_name": "emotion_expression",
+      "axis_value": 0.9,
+      "category": "用户喜欢表达"
+    },
+    {
+      "text": "我不想要情绪太外放的，收着点拍",
+      "axis_name": "emotion_expression",
+      "axis_value": -0.6,
+      "category": "用户拒绝表达"
+    },
+    {
+      "text": "给我整点有表现力的，眼神要狠一点",
+      "axis_name": "emotion_expression",
+      "axis_value": 0.8,
+      "category": "口语表达"
+    },
+    {
+      "text": "希望照片能传递出一种热烈张扬的生命力",
+      "axis_name": "emotion_expression",
+      "axis_value": 0.85,
+      "category": "隐含表达"
+    },
+    {
+      "text": "演唱会现场那种又哭又笑、情绪完全爆发的瞬间",
+      "axis_name": "emotion_expression",
+      "axis_value": 1.0,
+      "category": "场景表达"
+    },
+    {
+      "text": "我想要那种很温柔的奶油光效果",
+      "axis_name": "lighting_strength",
+      "axis_value": -0.8,
+      "category": "用户喜欢表达"
+    },
+    {
+      "text": "千万别打那种很硬的闪光灯，太刺眼了",
+      "axis_name": "lighting_strength",
+      "axis_value": -0.9,
+      "category": "用户拒绝表达"
+    },
+    {
+      "text": "光线弄得柔和一点，别太生硬",
+      "axis_name": "lighting_strength",
+      "axis_value": -0.6,
+      "category": "口语表达"
+    },
+    {
+      "text": "希望能拍出那种电影里黑白分明的高级感",
+      "axis_name": "lighting_strength",
+      "axis_value": 0.8,
+      "category": "隐含表达"
+    },
+    {
+      "text": "就像下午四点坐在咖啡馆窗边的那种自然光",
+      "axis_name": "lighting_strength",
+      "axis_value": -0.7,
+      "category": "场景表达"
+    },
+    {
+      "text": "给我加上强烈的轮廓光，要那种明暗反差极大的感觉",
+      "axis_name": "lighting_strength",
+      "axis_value": 0.9,
+      "category": "用户喜欢表达"
+    },
+    {
+      "text": "别搞那种雾蒙蒙的柔光，我要清晰的硬阴影",
+      "axis_name": "lighting_strength",
+      "axis_value": 0.7,
+      "category": "用户拒绝表达"
+    },
+    {
+      "text": "光打硬一点，阴影要明显",
+      "axis_name": "lighting_strength",
+      "axis_value": 0.8,
+      "category": "口语表达"
+    },
+    {
+      "text": "想要那种皮肤看起来没有瑕疵、自带磨皮感的光线",
+      "axis_name": "lighting_strength",
+      "axis_value": -0.8,
+      "category": "隐含表达"
+    },
+    {
+      "text": "正午烈日当空直射下来的那种强烈光影",
+      "axis_name": "lighting_strength",
+      "axis_value": 0.9,
+      "category": "场景表达"
+    },
+    {
+      "text": "正常曝光就行，光线自然清楚，不用特意加效果",
+      "axis_name": "lighting_strength",
+      "axis_value": 0.0,
+      "category": "用户喜欢表达"
+    },
+    {
+      "text": "我不喜欢脸上有一块黑一块白的明显阴影",
+      "axis_name": "lighting_strength",
+      "axis_value": -0.7,
+      "category": "用户拒绝表达"
+    },
+    {
+      "text": "亮度刚刚好就行，别太亮也别太暗",
+      "axis_name": "lighting_strength",
+      "axis_value": 0.1,
+      "category": "口语表达"
+    },
+    {
+      "text": "想要那种舞台聚光灯打在身上的立体感",
+      "axis_name": "lighting_strength",
+      "axis_value": 0.7,
+      "category": "隐含表达"
+    },
+    {
+      "text": "就像普通办公室日光灯下那种均匀明亮的照明",
+      "axis_name": "lighting_strength",
+      "axis_value": 0.0,
+      "category": "场景表达"
+    },
+    {
+      "text": "我想要那种可以直接上时尚杂志封面的大片感造型。",
+      "axis_name": "fashion_level",
+      "axis_value": 0.9,
+      "category": "用户喜欢表达"
+    },
+    {
+      "text": "别给我整那些秀场上奇奇怪怪的设计师款，太夸张了。",
+      "axis_name": "fashion_level",
+      "axis_value": -0.8,
+      "category": "用户拒绝表达"
+    },
+    {
+      "text": "就随便穿穿，舒服自在点就行，别搞得太隆重。",
+      "axis_name": "fashion_level",
+      "axis_value": -0.7,
+      "category": "口语表达"
+    },
+    {
+      "text": "我是去楼下超市买个菜，不用穿得像要去走红毯一样。",
+      "axis_name": "fashion_level",
+      "axis_value": -0.9,
+      "category": "隐含表达"
+    },
+    {
+      "text": "这次拍摄的主题是先锋艺术，需要极具视觉冲击力的editorial风格。",
+      "axis_name": "fashion_level",
+      "axis_value": 1.0,
+      "category": "场景表达"
+    },
+    {
+      "text": "希望有一套稍微带点设计感，但平时上班穿也不会太突兀的轻时髦穿搭。",
+      "axis_name": "fashion_level",
+      "axis_value": 0.2,
+      "category": "用户喜欢表达"
+    },
+    {
+      "text": "我不要那种毫无亮点的普通路人通勤装，太土了。",
+      "axis_name": "fashion_level",
+      "axis_value": 0.6,
+      "category": "用户拒绝表达"
+    },
+    {
+      "text": "给我来点炸街的潮牌混搭，越有个性越好！",
+      "axis_name": "fashion_level",
+      "axis_value": 0.8,
+      "category": "口语表达"
+    },
+    {
+      "text": "周末和闺蜜去网红咖啡馆打卡，想穿得稍微出片一点，但又不想太刻意。",
+      "axis_name": "fashion_level",
+      "axis_value": 0.3,
+      "category": "隐含表达"
+    },
+    {
+      "text": "这是给社区志愿者拍的纪实照片，需要最真实、接地气的日常便服。",
+      "axis_name": "fashion_level",
+      "axis_value": -0.8,
+      "category": "场景表达"
+    },
+    {
+      "text": "我特别偏爱那种解构主义的高级时装，剪裁一定要大胆前卫。",
+      "axis_name": "fashion_level",
+      "axis_value": 0.95,
+      "category": "用户喜欢表达"
+    },
+    {
+      "text": "太有造型感了，我驾驭不了这种像从时装周秀场直接搬下来的衣服。",
+      "axis_name": "fashion_level",
+      "axis_value": -0.7,
+      "category": "用户拒绝表达"
+    },
+    {
+      "text": "怎么舒服怎么来吧，套件大T恤和运动裤就完事了。",
+      "axis_name": "fashion_level",
+      "axis_value": -0.9,
+      "category": "口语表达"
+    },
+    {
+      "text": "我想尝试一下那种让人看不懂但大受震撼的前卫穿搭。",
+      "axis_name": "fashion_level",
+      "axis_value": 0.85,
+      "category": "隐含表达"
+    },
+    {
+      "text": "年会上的着装要求是Smart Casual，需要得体但带点时尚小巧思。",
+      "axis_name": "fashion_level",
+      "axis_value": 0.1,
+      "category": "场景表达"
+    },
+    {
+      "text": "我想要那种职场大女人的感觉",
+      "axis_name": "maturity",
+      "axis_value": 0.8,
+      "category": "用户喜欢表达"
+    },
+    {
+      "text": "千万别给我弄得太幼态了",
+      "axis_name": "maturity",
+      "axis_value": 0.8,
+      "category": "用户拒绝表达"
+    },
+    {
+      "text": "想看起来像个靠谱的大姐姐",
+      "axis_name": "maturity",
+      "axis_value": 0.7,
+      "category": "口语表达"
+    },
+    {
+      "text": "我还是个大学生，想要点校园风",
+      "axis_name": "maturity",
+      "axis_value": -0.6,
+      "category": "隐含表达"
+    },
+    {
+      "text": "准备去面试外企高管，需要稳重一点的形象",
+      "axis_name": "maturity",
+      "axis_value": 0.9,
+      "category": "场景表达"
+    },
+    {
+      "text": "喜欢那种清纯初恋脸的妆造",
+      "axis_name": "maturity",
+      "axis_value": -0.7,
+      "category": "用户喜欢表达"
+    },
+    {
+      "text": "别把我化得太显老了",
+      "axis_name": "maturity",
+      "axis_value": -0.7,
+      "category": "用户拒绝表达"
+    },
+    {
+      "text": "显得元气满满像十八岁最好啦",
+      "axis_name": "maturity",
+      "axis_value": -0.8,
+      "category": "口语表达"
+    },
+    {
+      "text": "平时要带团队，希望照片有气场一些",
+      "axis_name": "maturity",
+      "axis_value": 0.8,
+      "category": "隐含表达"
+    },
+    {
+      "text": "毕业照想拍那种邻家妹妹的清新感",
+      "axis_name": "maturity",
+      "axis_value": -0.7,
+      "category": "场景表达"
+    },
+    {
+      "text": "偏爱知性优雅的风格",
+      "axis_name": "maturity",
+      "axis_value": 0.7,
+      "category": "用户喜欢表达"
+    },
+    {
+      "text": "不要太学生气了",
+      "axis_name": "maturity",
+      "axis_value": 0.6,
+      "category": "用户拒绝表达"
+    },
+    {
+      "text": "给我整点御姐范儿",
+      "axis_name": "maturity",
+      "axis_value": 0.8,
+      "category": "口语表达"
+    },
+    {
+      "text": "自然一点就好，不用刻意装嫩也不用太严肃",
+      "axis_name": "maturity",
+      "axis_value": 0.0,
+      "category": "隐含表达"
+    },
+    {
+      "text": "想更像职场头像，用于领英资料",
+      "axis_name": "maturity",
+      "axis_value": 0.8,
+      "category": "场景表达"
+    },
+    {
+      "text": "我想要那种很有女人味的优雅穿搭",
+      "axis_name": "femininity",
+      "axis_value": 0.8,
+      "category": "用户喜欢表达"
+    },
+    {
+      "text": "千万别给我弄得太娇柔做作",
+      "axis_name": "femininity",
+      "axis_value": -0.8,
+      "category": "用户拒绝表达"
+    },
+    {
+      "text": "多来点那种温柔大姐姐的感觉",
+      "axis_name": "femininity",
+      "axis_value": 0.7,
+      "category": "口语表达"
+    },
+    {
+      "text": "平时上班穿得比较干练，喜欢oversize西装",
+      "axis_name": "femininity",
+      "axis_value": -0.6,
+      "category": "隐含表达"
+    },
+    {
+      "text": "参加晚宴需要一套凸显曲线和柔美气质的礼服",
+      "axis_name": "femininity",
+      "axis_value": 0.9,
+      "category": "场景表达"
+    },
+    {
+      "text": "我偏爱无性别风的利落剪裁",
+      "axis_name": "femininity",
+      "axis_value": -0.7,
+      "category": "用户喜欢表达"
+    },
+    {
+      "text": "不想穿得像个假小子一样",
+      "axis_name": "femininity",
+      "axis_value": 0.7,
+      "category": "用户拒绝表达"
+    },
+    {
+      "text": "随便搭搭就行，干净自然点，别太刻意",
+      "axis_name": "femininity",
+      "axis_value": 0.1,
+      "category": "口语表达"
+    },
+    {
+      "text": "喜欢真丝材质和带点微喇设计的裙装",
+      "axis_name": "femininity",
+      "axis_value": 0.6,
+      "category": "隐含表达"
+    },
+    {
+      "text": "去livehouse看摇滚演出，想走那种酷飒的无性别风",
+      "axis_name": "femininity",
+      "axis_value": -0.9,
+      "category": "场景表达"
+    },
+    {
+      "text": "希望整体造型能展现出精致浪漫的女人味",
+      "axis_name": "femininity",
+      "axis_value": 0.85,
+      "category": "用户喜欢表达"
+    },
+    {
+      "text": "不要那种太boyish的短发造型，我想留长发",
+      "axis_name": "femininity",
+      "axis_value": 0.6,
+      "category": "用户拒绝表达"
+    },
+    {
+      "text": "给我整点那种又A又飒的帅气打扮",
+      "axis_name": "femininity",
+      "axis_value": -0.5,
+      "category": "口语表达"
+    },
+    {
+      "text": "基础款白T恤配直筒牛仔裤就挺好",
+      "axis_name": "femininity",
+      "axis_value": 0.0,
+      "category": "隐含表达"
+    },
+    {
+      "text": "约会的时候想穿得温婉柔和一些",
+      "axis_name": "femininity",
+      "axis_value": 0.75,
+      "category": "场景表达"
+    },
+    {
+      "text": "我想要那种笑起来特别甜的元气少女感",
+      "axis_name": "sweetness",
+      "axis_value": 0.9,
+      "category": "用户喜欢表达"
+    },
+    {
+      "text": "给我推一些软萌可爱、粉色氛围满满的风格",
+      "axis_name": "sweetness",
+      "axis_value": 0.8,
+      "category": "用户喜欢表达"
+    },
+    {
+      "text": "千万别给我弄那种甜腻腻的甜妹风",
+      "axis_name": "sweetness",
+      "axis_value": -0.8,
+      "category": "用户拒绝表达"
+    },
+    {
+      "text": "我不喜欢太可爱的，我要高冷厌世脸",
+      "axis_name": "sweetness",
+      "axis_value": -0.9,
+      "category": "用户拒绝表达"
+    },
+    {
+      "text": "要那种甜度爆表的，像吃糖一样",
+      "axis_name": "sweetness",
+      "axis_value": 1.0,
+      "category": "口语表达"
+    },
+    {
+      "text": "别太甜了，稍微清冷一点有气质",
+      "axis_name": "sweetness",
+      "axis_value": -0.6,
+      "category": "口语表达"
+    },
+    {
+      "text": "就那种干干净净、看着很舒服的自然感就行",
+      "axis_name": "sweetness",
+      "axis_value": 0.0,
+      "category": "口语表达"
+    },
+    {
+      "text": "希望看起来像邻家妹妹一样有亲和力",
+      "axis_name": "sweetness",
+      "axis_value": 0.7,
+      "category": "隐含表达"
+    },
+    {
+      "text": "想要一种生人勿近的距离感",
+      "axis_name": "sweetness",
+      "axis_value": -0.8,
+      "category": "隐含表达"
+    },
+    {
+      "text": "妆容不要太浓，透着点自然的红润就好",
+      "axis_name": "sweetness",
+      "axis_value": 0.1,
+      "category": "隐含表达"
+    },
+    {
+      "text": "适合去游乐园拍照的那种活泼可爱风",
+      "axis_name": "sweetness",
+      "axis_value": 0.8,
+      "category": "场景表达"
+    },
+    {
+      "text": "职场通勤需要干练一点，不要太稚气",
+      "axis_name": "sweetness",
+      "axis_value": -0.5,
+      "category": "场景表达"
+    },
+    {
+      "text": "约会的时候想展现一下温柔甜美的气质",
+      "axis_name": "sweetness",
+      "axis_value": 0.6,
+      "category": "场景表达"
+    },
+    {
+      "text": "带点酷酷的拽姐感觉，拒绝傻白甜",
+      "axis_name": "sweetness",
+      "axis_value": -0.7,
+      "category": "隐含表达"
+    },
+    {
+      "text": "就是那种一看就让人心情很好的治愈系甜笑",
+      "axis_name": "sweetness",
+      "axis_value": 0.9,
+      "category": "口语表达"
+    },
+    {
+      "text": "千万不要那种发黄的老照片滤镜，太显旧了",
+      "axis_name": "retro",
+      "axis_value": -0.8,
+      "category": "用户拒绝表达"
+    },
+    {
+      "text": "我想要那种90年代港风美女的感觉，浓郁复古",
+      "axis_name": "retro",
+      "axis_value": 0.9,
+      "category": "用户喜欢表达"
+    },
+    {
+      "text": "给我整点胶片感，那种颗粒感绝了",
+      "axis_name": "retro",
+      "axis_value": 0.8,
+      "category": "口语表达"
+    },
+    {
+      "text": "想要王家卫电影里的那种色调和氛围",
+      "axis_name": "retro",
+      "axis_value": 0.85,
+      "category": "隐含表达"
+    },
+    {
+      "text": "在老街巷里拍一套民国风的旗袍写真",
+      "axis_name": "retro",
+      "axis_value": 0.9,
+      "category": "场景表达"
+    },
+    {
+      "text": "拒绝复古风，我要那种很干净利落的现代极简高级感",
+      "axis_name": "retro",
+      "axis_value": -0.9,
+      "category": "用户拒绝表达"
+    },
+    {
+      "text": "喜欢法式复古那种慵懒又经典的调调",
+      "axis_name": "retro",
+      "axis_value": 0.75,
+      "category": "用户喜欢表达"
+    },
+    {
+      "text": "别给我搞那种年代感太强的，看着像上世纪的",
+      "axis_name": "retro",
+      "axis_value": -0.7,
+      "category": "口语表达"
+    },
+    {
+      "text": "希望照片有那种老钱风的质感，低调但经得起时间考验",
+      "axis_name": "retro",
+      "axis_value": 0.6,
+      "category": "隐含表达"
+    },
+    {
+      "text": "穿着Vintage古着在咖啡馆拍一组棕调画报",
+      "axis_name": "retro",
+      "axis_value": 0.85,
+      "category": "场景表达"
+    },
+    {
+      "text": "不要港风也不要复古卷发，就清清爽爽的当代日常感就行",
+      "axis_name": "retro",
+      "axis_value": -0.8,
+      "category": "用户拒绝表达"
+    },
+    {
+      "text": "超爱这种带点CCD相机拍出来的千禧年复古怀旧感",
+      "axis_name": "retro",
+      "axis_value": 0.8,
+      "category": "用户喜欢表达"
+    },
+    {
+      "text": "稍微带点经典耐看的风格就好，别太夸张的复古也别太前卫",
+      "axis_name": "retro",
+      "axis_value": 0.0,
+      "category": "口语表达"
+    },
+    {
+      "text": "想要那种未来科技感，冷色调，线条锋利的视觉",
+      "axis_name": "retro",
+      "axis_value": -0.9,
+      "category": "隐含表达"
+    },
+    {
+      "text": "在废弃工厂拍一套赛博朋克风，要那种很现代很未来的感觉",
+      "axis_name": "retro",
+      "axis_value": -0.85,
+      "category": "场景表达"
+    },
+    {
+      "text": "我想要一套新中式风格的衣服，带点盘扣设计的。",
+      "axis_name": "oriental",
+      "axis_value": 0.8,
+      "category": "用户喜欢表达"
+    },
+    {
+      "text": "千万别给我推荐汉服或者旗袍，我不喜欢古风。",
+      "axis_name": "oriental",
+      "axis_value": -0.8,
+      "category": "用户拒绝表达"
+    },
+    {
+      "text": "给我整点那种国风的感觉，要有东方韵味。",
+      "axis_name": "oriental",
+      "axis_value": 0.6,
+      "category": "口语表达"
+    },
+    {
+      "text": "希望能体现出江南水乡那种温婉含蓄的气质，像水墨画一样。",
+      "axis_name": "oriental",
+      "axis_value": 0.7,
+      "category": "隐含表达"
+    },
+    {
+      "text": "我要去苏州园林拍写真，需要一套明制汉服。",
+      "axis_name": "oriental",
+      "axis_value": 0.9,
+      "category": "场景表达"
+    },
+    {
+      "text": "我更偏爱欧美高街风，要那种国际化、现代都市的感觉。",
+      "axis_name": "oriental",
+      "axis_value": -0.7,
+      "category": "用户喜欢表达"
+    },
+    {
+      "text": "不要太传统的中式元素，我不想穿得像去唱戏的。",
+      "axis_name": "oriental",
+      "axis_value": -0.6,
+      "category": "用户拒绝表达"
+    },
+    {
+      "text": "给我来点洋气的，别搞那些老气的中国风。",
+      "axis_name": "oriental",
+      "axis_value": -0.5,
+      "category": "口语表达"
+    },
+    {
+      "text": "日常通勤穿的衣服，简单大方就好，不需要什么特别的装饰。",
+      "axis_name": "oriental",
+      "axis_value": 0.1,
+      "category": "隐含表达"
+    },
+    {
+      "text": "准备去纽约时装周看秀，需要一套非常先锋现代的欧美设计师品牌。",
+      "axis_name": "oriental",
+      "axis_value": -0.8,
+      "category": "场景表达"
+    },
+    {
+      "text": "喜欢带点东方美学的设计，比如玉石或者竹子元素的点缀。",
+      "axis_name": "oriental",
+      "axis_value": 0.5,
+      "category": "用户喜欢表达"
+    },
+    {
+      "text": "想要那种清冷的新中式，带点宋代的极简美学。",
+      "axis_name": "oriental",
+      "axis_value": 0.8,
+      "category": "口语表达"
+    },
+    {
+      "text": "衣服剪裁要非常利落，有那种西方立体裁剪的摩登感。",
+      "axis_name": "oriental",
+      "axis_value": -0.4,
+      "category": "隐含表达"
+    },
+    {
+      "text": "中秋节要参加一个传统文化雅集，想穿有东方禅意的茶服。",
+      "axis_name": "oriental",
+      "axis_value": 0.7,
+      "category": "场景表达"
+    },
+    {
+      "text": "不要刻意强调国风，普通现代的休闲装就行，自然一点。",
+      "axis_name": "oriental",
+      "axis_value": -0.2,
+      "category": "用户拒绝表达"
+    }
+  ]
+}
