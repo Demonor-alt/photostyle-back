@@ -1,12 +1,8 @@
 import json  # 引入json用于解析标签数据
-import logging  # 引入logging用于记录信息
 from pathlib import Path  # 引入Path用于处理临时文件保存路径
 from uuid import uuid4  # 引入uuid用于生成临时文件名
 
 from fastapi import UploadFile  # 引入UploadFile类型
-
-logger = logging.getLogger(__name__)  # 创建日志器
-
 
 def save_upload_file(upload: UploadFile) -> tuple[str, str]:  # 保存上传文件到本地临时目录
     """

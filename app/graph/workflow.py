@@ -6,22 +6,15 @@ LangGraph工作流模块
 
 from __future__ import annotations
 
-import logging
+from app.utils.runtime import logger
 from typing import TypedDict, Any
 
 from typing_extensions import NotRequired
 
 from app.schemas.history import SuggestRequest
 from app.services.llm.qwen_suggest_client import generate_suggestion
+from langgraph.graph import END, StateGraph  # type: ignore[import-not-found]
 
-logger = logging.getLogger(__name__)
-
-
-try:
-    from langgraph.graph import END, StateGraph  # type: ignore[import-not-found]
-except Exception:  # pragma: no cover - 在未安装LangGraph时提供降级能力
-    END = None
-    StateGraph = None
 
 
 class WorkflowState(TypedDict, total=False):
@@ -41,19 +34,12 @@ def generator_node(state: WorkflowState) -> WorkflowState:
     return {"suggestion": suggestion.model_dump()}
 
 
-class _FallbackWorkflow:
-    """当环境未安装LangGraph时的轻量降级对象。"""
-
-    def invoke(self, state: dict[str, Any]) -> dict[str, Any]:
-        return generator_node(state)  # type: ignore[arg-type]
-
 
 def build_workflow():
     """构建建议生成工作流。"""
     if StateGraph is None:
         logger.warning("LangGraph 未安装，使用降级工作流执行 Generator 节点")
-        return _FallbackWorkflow()
-
+        return None
     graph = StateGraph(WorkflowState)
     graph.add_node("generator", generator_node)
     graph.set_entry_point("generator")

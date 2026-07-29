@@ -1,4 +1,4 @@
-import logging  # 引入logging用于记录接口调用信息
+from app.utils.runtime import logger
 from pathlib import Path  # 引入Path用于处理临时文件保存路径
 
 from fastapi import APIRouter, Depends  # 引入路由与依赖注入能力
@@ -38,8 +38,6 @@ from app.db.user_mapper import (
 )
 from app.services.llm.qwen_face_client import analyze_image  # 引入Qwen图片分析服务
 from app.api.utils import save_upload_file  # 引入文件上传工具函数
-
-logger = logging.getLogger(__name__)  # 创建路由模块日志器
 
 router = APIRouter()  # 创建路由实例
 

@@ -2,7 +2,7 @@
 from __future__ import annotations  # 启用前向引用类型注解。
 
 import json  # 用于 JSON 序列化与反序列化。
-import logging  # 用于记录运行日志。
+from app.utils.runtime import logger
 import os  # 用于读取环境变量。
 from typing import Any  # 用于表示任意类型。
 
@@ -14,7 +14,6 @@ from app.rag.semantic_anchor_milvus_service import search_similar_anchor  # 引�
 
 # 配置 DashScope 百炼 API 地址，保持和现有 Qwen 服务一致。  # 让 SDK 指向正确的服务地址。
 dashscope.base_http_api_url = "https://dashscope.aliyuncs.com/api/v1"  # 设置 DashScope 基础 API 地址。
-logger = logging.getLogger(__name__)  # 获取当前模块的日志器。
 
 # 默认召回语义锚点数量，既提供足够语义证据，又避免 LLM 输入过长。  # 限制召回数量以平衡效果与成本。
 DEFAULT_ANCHOR_TOP_K = 8  # 默认检索 8 个语义锚点。

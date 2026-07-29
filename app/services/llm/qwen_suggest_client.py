@@ -1,5 +1,5 @@
 import json  # 引入json用于组织和解析Qwen建议返回内容
-import logging  # 引入logging用于记录调用输入输出
+from app.utils.runtime import logger
 import os  # 引入os用于读取环境变量中的API密钥
 
 from dashscope import Generation  # 引入DashScope生成接口
@@ -9,7 +9,6 @@ from app.schemas.history import SuggestRequest, SuggestResponse  # 引入请求�
 
 
 dashscope.base_http_api_url = 'https://dashscope.aliyuncs.com/api/v1'  # 配置百炼API地址
-logger = logging.getLogger(__name__)  # 创建模块级日志器
 
 
 # 统一调用 Qwen 生成拍照穿搭建议，避免业务层直接依赖 SDK 细节

@@ -1,6 +1,5 @@
 import json  # 引入json用于构造SSE数据
-import logging  # 引入logging用于记录接口调用信息
-
+from app.utils.runtime import logger
 from fastapi import APIRouter, Depends  # 引入路由与依赖注入能力
 from pydantic import BaseModel  # 引入Pydantic基础模型
 from fastapi.responses import StreamingResponse  # 引入流式响应
@@ -31,8 +30,6 @@ from app.db.history_mapper import (  # 引入历史数据服务
 from app.db.user_mapper import get_user_profile  # 引入用户查询服务
 from app.rabbitmq.feedback_tasks import publish_feedback_updated  # 引入反馈异步任务发布器
 from app.api.utils import save_upload_file, parse_tag_list  # 引入工具函数
-
-logger = logging.getLogger(__name__)  # 创建路由模块日志器
 
 router = APIRouter()  # 创建路由实例
 
