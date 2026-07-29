@@ -4,11 +4,14 @@ import os  # 引入os用于读取环境变量中的API密钥
 
 from dashscope import Generation  # 引入DashScope生成接口
 import dashscope  # 引入DashScope配置对象
+from langchain_core.output_parsers import PydanticOutputParser
+from langchain_core.exceptions import OutputParserException
 
 from app.schemas.history import SuggestRequest, SuggestResponse  # 引入请求响应模型
-
+from app.services.llm.qwen_client import get_api_key, get_qwen_response_message
 
 dashscope.base_http_api_url = os.getenv("DASHSCOPE_API_URL")  # 配置百炼API地址
+suggest_response_parser = PydanticOutputParser(pydantic_object=SuggestResponse)
 
 
 # 统一调用 Qwen 生成拍照穿搭建议，避免业务层直接依赖 SDK 细节
@@ -18,7 +21,17 @@ def generate_suggestion(payload: SuggestRequest, user_face_analysis: dict | None
     face_analysis = user_face_analysis or payload.face_analysis or {}  # 统一人脸分析数据来源
 
     messages = [  # 组织给Qwen的消息
-        {"role": "system", "content": "你是一个专业的拍照穿搭与姿势建议助手。请严格只输出JSON，不要输出任何解释、代码块、Markdown或多余文本。JSON字段必须包括outfit、makeup、poses、summary，其中outfit、makeup、poses必须是数组，summary必须是字符串。"},
+        {"role": "system", "content": """你是一个专业的拍照穿搭与姿势建议助手。
+        你的输出包含五个字段：reason、outfit、makeup、poses、summary。
+        核心要求：outfit、makeup、poses 三者必须构成一个协调统一的整体造型方案。它们不是各自独立的建议列表，而是为同一张照片设计的配套组合——穿搭的风格决定妆容的色调，妆容的气质决定姿势的情绪，三者互相支撑、缺一不可。
+        具体要求：
+        - outfit：穿搭建议列表，每一件单品的选择都要考虑与妆容和姿势的配合
+        - makeup：妆容建议列表，色调、风格必须与穿搭统一（如穿搭偏冷色则妆容也偏冷调）
+        - poses：姿势建议列表，动作要能展现这套穿搭的亮点，同时与妆容气质匹配
+        - reason：解释为什么这三者这样搭配是协调的
+        - summary：整体总结，描述最终画面效果
+        请严格按格式说明输出JSON，不要输出任何解释、代码块、Markdown或多余文本。"""
+        },
         {"role": "user", "content": json.dumps({
             "username": payload.username,
             "style": payload.style,
@@ -30,30 +43,25 @@ def generate_suggestion(payload: SuggestRequest, user_face_analysis: dict | None
             "pose_tags": payload.pose_tags,
             "extra_tags": payload.extra_tags,
             "face_analysis": face_analysis,
-            "output_schema": {"outfit": ["string"], "makeup": ["string"], "poses": ["string"], "summary": "string"},
+            "format_instructions": suggest_response_parser.get_format_instructions(),
         }, ensure_ascii=False)},
     ]
     logger.info("qwen_suggest_client request=%s", json.dumps({"payload": payload.model_dump(), "face_analysis": face_analysis, "messages": messages}, ensure_ascii=False, default=str))
-    api_key = os.getenv("DASHSCOPE_API_KEY")  # 读取百炼API Key
-    if not api_key:  # 如果没有配置密钥
-        raise RuntimeError("未配置 DASHSCOPE_API_KEY，无法调用 Qwen 生成建议")  # 直接暴露配置问题
     response = Generation.call(
-        api_key=api_key,
+        api_key=get_api_key(),
         model="qwen3-max",
         messages=messages,
         result_format="message",
         enable_thinking=True,
     )
-    raw_text = response.output.choices[0].message.content
+    message = get_qwen_response_message(response)
+    if message is None:
+        raise ValueError("Qwen 建议生成调用失败")
+    raw_text = message.content
     logger.info("qwen_suggest_client response_raw=%s", raw_text)
     try:
-        payload_data = json.loads(raw_text)
-    except Exception as exc:
-        raise ValueError("Qwen 返回内容无法解析为 JSON") from exc
-    outfit = payload_data.get("outfit", [])
-    makeup = payload_data.get("makeup", [])
-    poses = payload_data.get("poses", [])
-    summary = str(payload_data.get("summary", "")).strip() or f"已结合{payload.style}风格和 face_analysis 生成建议。"
-    result = SuggestResponse(outfit=outfit, makeup=makeup, poses=poses, summary=summary)
+        result = suggest_response_parser.parse(raw_text)
+    except OutputParserException as exc:
+        raise ValueError("Qwen 返回内容无法映射为 SuggestResponse") from exc
     logger.info("qwen_suggest_client response_parsed=%s", result.model_dump())
     return result  # 响应对象结束

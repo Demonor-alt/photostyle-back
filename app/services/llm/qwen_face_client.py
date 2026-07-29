@@ -7,7 +7,7 @@ from pathlib import Path  # 引入Path用于处理本地图片路径
 import dashscope  # 引入DashScope SDK用于调用Qwen多模态接口
 
 from app.utils.runtime import DEBUG_ENABLED, logger  # 引入调试开关和统一日志器
-
+from app.services.llm.qwen_client import get_api_key
 
 dashscope.base_http_api_url = os.getenv("DASHSCOPE_API_URL")  # 设置DashScope基础API地址
 
@@ -92,27 +92,7 @@ _SIMPLE_ANALYSIS_ENUMS = {
 }
 
 
-def _redact_sensitive_payload(payload: dict) -> dict:  # 脱敏敏感字段避免把图片路径输出到控制台
-    redacted = dict(payload)  # 复制一份避免修改原对象
-    if "image_path" in redacted and redacted["image_path"] is not None:  # 如果包含图片路径
-        redacted["image_path"] = "[REDACTED]"  # 将图片路径脱敏
-    if "image_base64" in redacted and redacted["image_base64"] is not None:  # 如果包含Base64内容
-        redacted["image_base64"] = "[REDACTED]"  # 将Base64内容脱敏
-    if "prompt" in redacted and isinstance(redacted["prompt"], str):  # 如果包含提示词
-        redacted["prompt"] = "[REDACTED]"  # 将提示词脱敏
-    return redacted  # 返回脱敏后的字典
-
-
-def _log_step(step_name: str, payload: dict) -> None:  # 记录模型调用调试信息
-    if not DEBUG_ENABLED:  # 如果不是调试模式
-        return  # 不输出日志
-    logger.debug("%s | %s", step_name, json.dumps(_redact_sensitive_payload(payload), ensure_ascii=False))  # 打印脱敏后的结构化日志
-
-
-def _build_image_payload(image_path: str | None, image_base64: str | None = None, image_mime_type: str | None = None) -> dict | None:  # 构建Qwen图片输入
-    if image_base64:  # 如果前端已经直接传了Base64
-        mime_type = image_mime_type or "image/jpeg"  # 如果没有传类型则默认JPEG
-        return {"image": f"data:{mime_type};base64,{image_base64}"}  # 直接返回Base64图片数据
+def _build_image_payload(image_path: str | None, image_mime_type: str | None = None) -> dict | None:  # 构建Qwen图片输入
     if not image_path:  # 如果没有图片路径则直接返回空
         return None  # 表示当前没有可识别图片
     if image_path.startswith("http://") or image_path.startswith("https://"):  # 如果是公网图片地址
@@ -219,13 +199,10 @@ def _normalize_simple_analysis(value: object) -> dict:  # 规范化simple_analys
     return normalized
 
 
-def analyze_image(image_path: str | None, image_base64: str | None = None, image_mime_type: str | None = None) -> dict:  # 调用Qwen分析图片并提取人物特征
-    api_key = os.getenv("DASHSCOPE_API_KEY")  # 读取DashScope密钥
-    if not api_key:  # 如果没有配置密钥
-        raise ValueError("DASHSCOPE_API_KEY 未配置，无法调用 Qwen 图片分析接口")  # 直接暴露配置问题
-    image_payload = _build_image_payload(image_path, image_base64=image_base64, image_mime_type=image_mime_type)  # 构建图片输入
+def analyze_image(image_path: str | None, image_mime_type: str | None = None) -> dict:  # 调用Qwen分析图片并提取人物特征
+    image_payload = _build_image_payload(image_path, image_mime_type=image_mime_type)  # 构建图片输入
     if image_payload is None:  # 如果没有有效图片
-        raise ValueError(f"没有可用图片输入，image_path={image_path}, image_base64={'已提供' if image_base64 else '未提供'}")  # 直接暴露图片输入问题
+        raise ValueError(f"没有可用图片输入，image_path={image_path}")  # 直接暴露图片输入问题
     prompt = (  # 构建严格JSON提示词
         "请严格只返回JSON，不要输出任何解释、代码块、Markdown或多余文本。"
         "JSON字段必须包含description、skin、facial_sense、face_shape、facial_features、proportions、style_keywords、has_face、simple_analysis。"
@@ -258,15 +235,15 @@ def analyze_image(image_path: str | None, image_base64: str | None = None, image
         }  # 用户消息结束
     ]  # 消息列表结束
     try:  # 捕获调用过程中的全部异常
-        _log_step("qwen.analyze.input", {"image_path": image_path, "image_base64": "已提供" if image_base64 else "未提供", "image_mime_type": image_mime_type, "prompt": prompt})  # 输出调用输入
         logger.info("qwen.analyze.calling model=%s image_path=%s", "qwen3.5-ocr", image_path)  # 记录调用开始
+        
         response = dashscope.MultiModalConversation.call(  # 调用Qwen多模态能力
-            api_key=api_key,  # 传入DashScope密钥
+            api_key=get_api_key(),  # 传入DashScope密钥
             model="qwen3.7-plus",  # 指定Qwen模型
             messages=messages,  # 传入消息列表
         )  # 调用结束
+
         logger.info("qwen.analyze.raw_response=%s", response)  # 记录原始响应到日志
-        _log_step("qwen.analyze.raw_response", {"response": str(response)})  # 输出原始响应
         if response is None:  # 如果SDK直接返回空
             raise ValueError("Qwen 接口返回为空")  # 直接暴露空响应
         if getattr(response, "status_code", 200) not in (200, None):  # 如果SDK带状态码且不是成功
@@ -303,5 +280,4 @@ def analyze_image(image_path: str | None, image_base64: str | None = None, image
         "raw": content,  # 原始模型输出
     }  # 返回结果结束
     logger.info("qwen.analyze.output=%s", result)  # 记录结构化结果到日志
-    _log_step("qwen.analyze.output", result)  # 输出调用结果
     return result  # 返回结果结束

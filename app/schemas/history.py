@@ -49,11 +49,11 @@ class SuggestRequest(BaseSchema):  # 定义拍照建议请求模型
 
 
 class SuggestResponse(BaseSchema):  # 定义拍照建议响应模型
-    suggestions: Optional[str] = None  # 旧格式：建议文本（兼容）
-    outfit: Optional[List[str]] = None  # 穿搭建议列表（新格式）
-    makeup: Optional[List[str]] = None  # 妆容建议列表（新格式）
-    poses: Optional[List[str]] = None  # 姿势建议列表（新格式）
-    summary: Optional[str] = None  # 整体总结（新格式）
+    reason: Optional[str] = None  # 建议原因
+    outfit: Optional[List[str]] = None  # 穿搭建议列表
+    makeup: Optional[List[str]] = None  # 妆容建议列表
+    poses: Optional[List[str]] = None  # 姿势建议列表
+    summary: Optional[str] = None  # 整体总结
 
 
 class HistoryRecord(BaseSchema):  # 定义历史记录模型

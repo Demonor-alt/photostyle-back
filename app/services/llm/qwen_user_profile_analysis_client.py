@@ -15,8 +15,7 @@ from app.rag.semantic_anchor_milvus_service import search_similar_anchor  # 引�
 # 配置 DashScope 百炼 API 地址，保持和现有 Qwen 服务一致。  # 让 SDK 指向正确的服务地址。
 dashscope.base_http_api_url = os.getenv("DASHSCOPE_API_URL")  # 设置 DashScope 基础 API 地址。
 
-# 默认召回语义锚点数量，既提供足够语义证据，又避免 LLM 输入过长。  # 限制召回数量以平衡效果与成本。
-DEFAULT_ANCHOR_TOP_K = 8  # 默认检索 8 个语义锚点。
+DEFAULT_ANCHOR_TOP_K = os.getenv("DEFAULT_ANCHOR_TOP_K")  #默认召回语义锚点数量
 
 
 def _safe_json_dumps(value: Any) -> str:  # 将任意对象安全序列化为 JSON 字符串。
