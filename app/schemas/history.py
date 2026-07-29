@@ -82,9 +82,6 @@ class MessageResponse(BaseSchema):  # 定义通用消息响应模型
     message: str  # 消息内容
 
 
-# ========== 接口专用响应模型 ==========
-
-
 class SuggestApiData(BaseSchema):  # /suggest 接口业务数据
     suggestions: Optional[str] = None
     outfit: Optional[List[str]] = None
@@ -92,28 +89,4 @@ class SuggestApiData(BaseSchema):  # /suggest 接口业务数据
     poses: Optional[List[str]] = None
     summary: Optional[str] = None
     history: Optional[dict] = None
-
-
-class SuggestApiResponse(BaseSchema):  # /suggest 接口响应
-    success: bool = True
-    message: str = "建议生成成功"
-    data: SuggestApiData
-
-
-class DatabaseStatusApiResponse(BaseSchema):  # /db/status 接口响应
-    success: bool = True
-    message: str = "数据库状态查询成功"
-    data: DatabaseStatusResponse
-
-
-class CreateHistoryApiResponse(BaseSchema):  # /history POST 接口响应
-    success: bool = True
-    message: str = "历史记录保存成功"
-    data: MessageResponse
-
-
-class GetHistoryApiResponse(BaseSchema):  # /history GET 接口响应
-    success: bool = True
-    message: str = "历史记录查询成功"
-    data: HistoryListResponse
 

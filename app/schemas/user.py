@@ -62,36 +62,3 @@ class UserResponse(BaseSchema):  # 定义用户响应模型
 
 class PhotoPreviewRequest(BaseSchema):  # 定义图片预览请求模型
     path: str = Field(..., description="图片文件路径")
-
-
-# ========== 接口专用响应模型 ==========
-
-
-class UploadPhotoApiResponse(BaseSchema):  # /photos/upload 接口响应
-    success: bool = True
-    message: str = "照片上传成功"
-    data: UploadPhotoData
-
-
-class RegisterApiResponse(BaseSchema):  # /auth/register 接口响应
-    success: bool = True
-    message: str = "注册成功"
-    data: UserResponse
-
-
-class LoginApiResponse(BaseSchema):  # /auth/login 接口响应
-    success: bool = True
-    message: str = "登录成功"
-    data: UserResponse
-
-
-class GetUserApiResponse(BaseSchema):  # /auth/me GET 接口响应
-    success: bool = True
-    message: str = "用户信息获取成功"
-    data: UserResponse
-
-
-class UpdateUserApiResponse(BaseSchema):  # /auth/me PUT 接口响应
-    success: bool = True
-    message: str = "用户资料更新成功"
-    data: UserResponse

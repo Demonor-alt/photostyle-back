@@ -4,15 +4,13 @@ from fastapi import APIRouter, Depends  # 引入路由与依赖注入能力
 from pydantic import BaseModel  # 引入Pydantic基础模型
 from fastapi.responses import StreamingResponse  # 引入流式响应
 
+from app.schemas.base import ApiResponse
 from app.schemas.history import (
-    CreateHistoryApiResponse,
-    DatabaseStatusApiResponse,
     DatabaseStatusResponse,
-    GetHistoryApiResponse,
     HistoryListResponse,
     HistoryRecord,
     MessageResponse,
-    SuggestApiResponse,
+    SuggestApiData,
     SuggestFormParams,
     SuggestRequest,
 )
@@ -41,10 +39,10 @@ class FeedbackUpdateRequest(BaseModel):
     feedback_comment: str | None = None
 
 
-@router.post("/suggest", response_model=SuggestApiResponse)  # 定义建议生成接口
+@router.post("/suggest", response_model=ApiResponse[SuggestApiData])  # 定义建议生成接口
 async def suggest(  # 定义支持表单上传的建议接口
     form: SuggestFormParams = Depends(),
-) -> SuggestApiResponse:  # 返回建议响应
+) -> ApiResponse[SuggestApiData]:  # 返回建议响应
     image_path = None  # 初始化图片路径
     image_mime_type = None  # 初始化图片MIME类型
     payload = SuggestRequest(  # 组装请求模型
@@ -86,7 +84,10 @@ async def suggest(  # 定义支持表单上传的建议接口
         logger.exception("suggest.history.save_failed")
         raise HistorySaveError(hint=str(exc)) from exc
     
-    return SuggestApiResponse(data={**result.model_dump(), "history": history})
+    return ApiResponse[SuggestApiData](
+        message="建议生成成功",
+        data=SuggestApiData(**{**result.model_dump(), "history": history}),
+    )
 
 
 # @router.post("/suggest/stream")  # 定义流式建议生成接口
@@ -132,27 +133,30 @@ async def suggest(  # 定义支持表单上传的建议接口
 #     )
 
 
-@router.get("/db/status", response_model=DatabaseStatusApiResponse)  # 定义数据库状态接口
-async def database_status() -> DatabaseStatusApiResponse:  # 返回数据库状态
+@router.get("/db/status", response_model=ApiResponse[DatabaseStatusResponse])  # 定义数据库状态接口
+async def database_status() -> ApiResponse[DatabaseStatusResponse]:  # 返回数据库状态
     status = get_database_status()  # 获取数据库连接信息
-    return DatabaseStatusApiResponse(
-        data=DatabaseStatusResponse(**status)
+    return ApiResponse[DatabaseStatusResponse](
+        message="数据库状态查询成功",
+        data=DatabaseStatusResponse(**status),
     )
 
 
-@router.post("/history", response_model=CreateHistoryApiResponse)  # 定义历史记录保存接口
-async def create_history(record: HistoryRecord) -> CreateHistoryApiResponse:  # 接收历史记录并保存
+@router.post("/history", response_model=ApiResponse[MessageResponse])  # 定义历史记录保存接口
+async def create_history(record: HistoryRecord) -> ApiResponse[MessageResponse]:  # 接收历史记录并保存
     save_history_record(record.model_dump())  # 将记录写入存储
-    return CreateHistoryApiResponse(
-        data=MessageResponse(message="历史记录保存成功")
+    return ApiResponse[MessageResponse](
+        message="历史记录保存成功",
+        data=MessageResponse(message="历史记录保存成功"),
     )
 
 
-@router.get("/history", response_model=GetHistoryApiResponse)  # 定义历史记录查询接口
-async def get_history(user_id: int | None = None) -> GetHistoryApiResponse:  # 获取历史记录列表，支持按用户ID筛选
+@router.get("/history", response_model=ApiResponse[HistoryListResponse])  # 定义历史记录查询接口
+async def get_history(user_id: int | None = None) -> ApiResponse[HistoryListResponse]:  # 获取历史记录列表，支持按用户ID筛选
     items = list_history_records(user_id=user_id)  # 按用户ID筛选历史记录
-    return GetHistoryApiResponse(
-        data=HistoryListResponse(items=items)
+    return ApiResponse[HistoryListResponse](
+        message="历史记录查询成功",
+        data=HistoryListResponse(items=items),
     )
 
 
