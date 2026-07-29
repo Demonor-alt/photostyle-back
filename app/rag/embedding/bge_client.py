@@ -7,7 +7,7 @@ from functools import lru_cache
 from app.utils.runtime import logger
 
 # 默认使用 bge-base-zh-v1.5，可通过 EMBEDDING_MODEL_NAME 指向 HuggingFace 模型名或本地模型目录。
-_MODEL_NAME = os.getenv("EMBEDDING_MODEL_NAME", "BAAI/bge-base-zh-v1.5")
+_MODEL_NAME = os.getenv("EMBEDDING_MODEL_NAME")
 # 允许通过环境变量指定运行设备，例如 cpu、cuda、cuda:0；不指定时由 sentence-transformers 自动判断。
 _DEVICE = os.getenv("EMBEDDING_DEVICE") or None
 # BGE 系列推荐查询侧加检索指令，文档侧不加；可通过环境变量覆盖或置空。

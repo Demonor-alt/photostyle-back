@@ -217,7 +217,7 @@ def load_anchor_file(anchor_file: Path) -> list[dict[str, Any]]:
 
 def import_anchor_file(anchor_file: Path) -> None:
     """从本地锚点文件一次性导入 Milvus。"""  # 将确认后的本地文件写入 Milvus。
-    from app.rag.milvus_service import insert_anchors  # 延迟导入，避免生成阶段依赖 Milvus 连接。
+    from app.rag.semantic_anchor_milvus_service import insert_anchors  # 延迟导入，避免生成阶段依赖 Milvus 连接。
 
     anchors = load_anchor_file(anchor_file)  # 读取本地锚点文件。
     for anchor in anchors:  # 遍历每条锚点，仅输出预览日志。

@@ -9,7 +9,7 @@ from typing import Any  # 用于表示任意类型。
 import dashscope  # 引入 DashScope SDK。
 from dashscope import Generation  # 引入文本生成能力。
 
-from app.rag.milvus_service import search_similar_anchor  # 引入 Milvus 语义锚点检索方法。
+from app.rag.semantic_anchor_milvus_service import search_similar_anchor  # 引入 Milvus 语义锚点检索方法。
 
 
 # 配置 DashScope 百炼 API 地址，保持和现有 Qwen 服务一致。  # 让 SDK 指向正确的服务地址。

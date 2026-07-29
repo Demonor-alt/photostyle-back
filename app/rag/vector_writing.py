@@ -6,45 +6,23 @@ import os  # 操作系统环境变量和路径操作
 from datetime import datetime  # 日期时间处理
 from typing import Any  # 类型提示支持
 
-from pymilvus import Collection, CollectionSchema, DataType, FieldSchema, connections, utility  # Milvus 向量数据库客户端
+from pymilvus import Collection, CollectionSchema, DataType, FieldSchema, utility  # Milvus 向量数据库客户端
 
 from app.db.history_mapper import get_history_record  # 从数据库获取历史记录
 from app.db.user_mapper import get_user_profile_by_id  # 从数据库获取用户长相
 from app.rag.embedding import embed_text, get_embedding_dimension, get_embedding_model_name  # 文本向量化功能
+from app.rag.milvus_client import (
+    connect_milvus
+)  # 复用通用 Milvus 客户端
 from app.utils.runtime import logger  # 日志记录器
 
 # Milvus collection 名称，默认存放照片风格推荐相关的历史记忆向量
-_COLLECTION_NAME = os.getenv("MILVUS_COLLECTION_NAME", "photo_style_embeddings")  # 从环境变量读取集合名称，默认为 photo_style_embeddings
-# Milvus 连接别名，便于 pymilvus 在同一进程中复用连接
-_CONNECTION_ALIAS = os.getenv("MILVUS_ALIAS", "default")  # 从环境变量读取连接别名，默认为 default
-# Milvus 中保存 embedding 的向量字段名，检索模块会复用该字段名
-_VECTOR_FIELD = "embedding"  # 定义向量字段名为 embedding
-
-
-def _get_milvus_uri() -> str:  # 定义获取 Milvus URI 的函数
-    """读取 Milvus 连接地址。"""
-    return os.getenv("MILVUS_URI", "http://localhost:19530")  # 从环境变量读取 Milvus URI，默认为本地地址
-
-
-def _get_milvus_token() -> str | None:  # 定义获取 Milvus 认证令牌的函数
-    """读取 Milvus token；本地无认证时返回 None。"""
-    token = os.getenv("MILVUS_TOKEN")  # 从环境变量读取 Milvus 认证令牌
-    return token if token else None  # 如果令牌存在则返回，否则返回 None
-
+_COLLECTION_NAME = os.getenv("MILVUS_COLLECTION_NAME")  # 从环境变量读取集合名称
+_VECTOR_FIELD = "embedding"
 
 def get_collection_name() -> str:  # 定义获取集合名称的公开函数
     """返回当前 RAG 使用的 Milvus collection 名称。"""
     return _COLLECTION_NAME  # 返回全局定义的集合名称
-
-
-def get_vector_field_name() -> str:  # 定义获取向量字段名的公开函数
-    """返回 Milvus 向量字段名。"""
-    return _VECTOR_FIELD  # 返回全局定义的向量字段名
-
-
-def get_connection_alias() -> str:  # 定义获取连接别名的公开函数
-    """返回 Milvus 连接别名。"""
-    return _CONNECTION_ALIAS  # 返回全局定义的连接别名
 
 
 def _safe_json_dumps(value: Any) -> str:  # 定义安全的 JSON 序列化函数
@@ -115,12 +93,6 @@ def _build_history_text(history: dict, user_profile: dict | None = None) -> str:
         f"用户长相:{_flatten_simple_analysis(simple_analysis)}",  # 添加压平后的用户长相
     ]
     return "\n".join(part for part in parts if part)  # 用换行符连接非空片段并返回
-
-
-def connect_milvus() -> None:  # 定义建立 Milvus 连接的函数
-    """建立 Milvus 连接；重复调用时 pymilvus 会复用同一 alias。"""
-    connections.connect(alias=_CONNECTION_ALIAS, uri=_get_milvus_uri(), token=_get_milvus_token())  # 使用别名、URI 和令牌建立连接
-    logger.info("Milvus 连接成功")
 
 
 def build_photo_style_embedding_payload(history: dict, user_profile: dict | None = None) -> dict:  # 定义构建向量载荷的函数

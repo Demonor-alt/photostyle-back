@@ -9,8 +9,8 @@ from app.rag.embedding import embed_text, get_embedding_model_name
 from app.rag.vector_writing import (
     connect_milvus,
     get_collection_name,
-    get_vector_field_name,
 )
+from app.rag.milvus_client import ( get_vector_field_name )  # 复用通用 Milvus 客户端
 from app.utils.runtime import logger
 
 # HNSW 检索参数；ef 越高召回越好但延迟越高，当前值适合作为业务默认值。
