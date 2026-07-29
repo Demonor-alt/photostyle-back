@@ -1,15 +1,18 @@
 """用户偏好分析服务。"""  # 模块说明：负责分析用户评论并生成偏好画像更新结果。
 from __future__ import annotations  # 启用前向引用类型注解。
 
-import json  # 用于 JSON 序列化与反序列化。
-from app.utils.runtime import logger
+import json  # 用于 JSON 序列化。
 import os  # 用于读取环境变量。
 from typing import Any  # 用于表示任意类型。
 
 import dashscope  # 引入 DashScope SDK。
 from dashscope import Generation  # 引入文本生成能力。
+from langchain_core.output_parsers import PydanticOutputParser
+from pydantic import BaseModel, Field
 
 from app.rag.semantic_anchor_milvus_service import search_similar_anchor  # 引入 Milvus 语义锚点检索方法。
+from app.services.llm.qwen_client import get_api_key, get_qwen_response_message
+from app.utils.runtime import logger
 
 
 # 配置 DashScope 百炼 API 地址，保持和现有 Qwen 服务一致。  # 让 SDK 指向正确的服务地址。
@@ -18,41 +21,31 @@ dashscope.base_http_api_url = os.getenv("DASHSCOPE_API_URL")  # 设置 DashScope
 DEFAULT_ANCHOR_TOP_K = os.getenv("DEFAULT_ANCHOR_TOP_K")  #默认召回语义锚点数量
 
 
+class PreferenceAxisUpdateOutput(BaseModel):
+    axis_name: str = Field(default="")
+    value: float = Field(default=0.0)
+    confidence: float = Field(default=0.0)
+    reason: str = Field(default="")
+
+
+class PreferenceAnalysisOutput(BaseModel):
+    axis_updates: list[PreferenceAxisUpdateOutput] = Field(default_factory=list)
+    avoid_patterns: list[str] = Field(default_factory=list)
+    success_patterns: list[str] = Field(default_factory=list)
+
+
+_PREFERENCE_ANALYSIS_PARSER = PydanticOutputParser(pydantic_object=PreferenceAnalysisOutput)
+
+
+def _message_text(message: Any) -> str:
+    content = getattr(message, "content", "")
+    return content if isinstance(content, str) else str(content)
+
+
 def _safe_json_dumps(value: Any) -> str:  # 将任意对象安全序列化为 JSON 字符串。
     """将任意业务对象稳定序列化为中文 JSON 字符串。"""  # 说明该函数用于稳定序列化。
     return json.dumps(value, ensure_ascii=False, sort_keys=True, default=str)  # 保留中文并保证字段顺序。
 
-
-def _clean_json_text(text: str) -> str:  # 清理 LLM 返回的文本。
-    """清理 LLM 可能返回的 Markdown 代码块包裹。"""  # 说明会去掉代码块包裹。
-    cleaned = text.strip()  # 去除首尾空白。
-    if cleaned.startswith("```"):  # 判断是否被三引号代码块包裹。
-        cleaned = cleaned[3:].lstrip()  # 去掉开头代码块标记。
-        if cleaned.startswith("json"):  # 若紧跟 json 标记。
-            cleaned = cleaned[4:].lstrip()  # 去掉 json 标记。
-    if cleaned.endswith("```"):  # 判断是否有结尾代码块标记。
-        cleaned = cleaned[:-3]  # 去掉结尾代码块标记。
-    return cleaned.strip()  # 返回清理后的内容。
-
-
-def _parse_llm_json(raw_text: str) -> dict[str, Any]:  # 解析 LLM 返回内容为 JSON 对象。
-    """解析 LLM 返回的严格 JSON 对象。"""  # 说明期望得到 JSON 对象。
-    cleaned = _clean_json_text(raw_text)  # 先清理可能的代码块包裹。
-    try:  # 尝试直接解析。
-        payload = json.loads(cleaned)  # 直接将清理后的文本转成对象。
-    except json.JSONDecodeError as exc:  # 捕获 JSON 解析失败。
-        start = cleaned.find("{")  # 寻找第一个对象起始位置。
-        end = cleaned.rfind("}")  # 寻找最后一个对象结束位置。
-        if start >= 0 and end > start:  # 如果能截取出一个 JSON 对象。
-            try:  # 再次尝试解析截取部分。
-                payload = json.loads(cleaned[start : end + 1])  # 解析对象片段。
-            except json.JSONDecodeError as inner_exc:  # 若仍失败。
-                raise ValueError("Qwen 返回内容无法解析为 JSON") from inner_exc  # 抛出业务异常。
-        else:  # 如果连对象边界都找不到。
-            raise ValueError("Qwen 返回内容不是有效 JSON") from exc  # 抛出业务异常。
-    if not isinstance(payload, dict):  # 确保解析结果是对象而不是数组或标量。
-        raise ValueError("Qwen 返回内容必须是 JSON 对象")  # 返回结构不符合要求。
-    return payload  # 返回解析后的对象。
 
 
 def _clamp(value: Any, min_value: float, max_value: float, default: float = 0.0) -> float:  # 将数值限制在区间内。
@@ -132,6 +125,7 @@ def _build_llm_messages(  # 构造发送给大模型的消息列表。
         "你是用户审美偏好分析服务。请根据用户评论、Milvus 语义锚点召回结果、历史画像和历史评分，"  # 第一段说明任务。
         "推断用户偏好的语义轴更新。不要使用固定关键词规则，只能基于输入证据做判断。"  # 约束推理方式。
         "请严格只输出 JSON，不要输出解释、Markdown 或代码块。"  # 要求输出格式。
+        f"请遵循以下格式要求：{_PREFERENCE_ANALYSIS_PARSER.get_format_instructions()}"  # LangChain解析器格式要求。
         "JSON 字段必须包含 axis_updates、avoid_patterns、success_patterns。"  # 要求字段完整。
         "axis_updates 中 confidence 表示你对判断的置信度，范围 0 到 1，不要自行融合 Milvus similarity。"  # 置信度说明。
     )  # 系统提示词结束。
@@ -141,9 +135,9 @@ def _build_llm_messages(  # 构造发送给大模型的消息列表。
     ]  # 消息列表结束。
 
 
-def _normalize_llm_result(payload: dict[str, Any]) -> dict[str, Any]:  # 标准化大模型输出。
+def _normalize_llm_result(payload: PreferenceAnalysisOutput) -> dict[str, Any]:  # 标准化大模型输出。
     """规范 LLM 输出结构，保证服务返回稳定。"""  # 说明该函数用于统一返回格式。
-    raw_updates = payload.get("axis_updates", [])  # 读取原始更新列表。
+    raw_updates = [item.model_dump() for item in payload.axis_updates]  # 读取Pydantic更新列表。
     axis_updates: list[dict[str, Any]] = []  # 初始化清洗后的更新列表。
     if isinstance(raw_updates, list):  # 仅处理列表类型。
         for item in raw_updates:  # 遍历每条更新。
@@ -168,8 +162,8 @@ def _normalize_llm_result(payload: dict[str, Any]) -> dict[str, Any]:  # 标准�
 
     return {  # 返回统一结构。
         "axis_updates": axis_updates,  # 语义轴更新。
-        "avoid_patterns": normalize_patterns(payload.get("avoid_patterns")),  # 避雷模式。
-        "success_patterns": normalize_patterns(payload.get("success_patterns")),  # 成功模式。
+        "avoid_patterns": normalize_patterns(payload.avoid_patterns),  # 避雷模式。
+        "success_patterns": normalize_patterns(payload.success_patterns),  # 成功模式。
     }  # 返回结束。
 
 
@@ -207,9 +201,7 @@ def analyze_user_preference(  # 对单个用户评论进行偏好分析。
     if not comment:  # 如果评论为空。
         return {"user_id": user_id, "axis_updates": [], "avoid_patterns": [], "success_patterns": [], "semantic_anchors": []}  # 返回空结果。
 
-    api_key = os.getenv("DASHSCOPE_API_KEY")  # 读取 API Key。
-    if not api_key:  # 如果未配置密钥。
-        raise RuntimeError("未配置 DASHSCOPE_API_KEY，无法调用 Qwen 偏好分析")  # 抛出运行时异常。
+    api_key = get_api_key()  # 读取并校验 API Key。
 
     anchors = _search_semantic_anchors(comment, top_k=max(1, int(top_k)))  # 检索语义锚点。
     similarity_by_axis = _best_similarity_by_axis(anchors)  # 计算每个轴的最佳相似度。
@@ -233,9 +225,12 @@ def analyze_user_preference(  # 对单个用户评论进行偏好分析。
         result_format="message",  # 结果格式为 message。
         enable_thinking=True,  # 开启思考能力。
     )  # 请求结束。
-    raw_text = response.output.choices[0].message.content  # 取出返回文本。
+    message = get_qwen_response_message(response)  # 统一判断Qwen响应并提取message。
+    if message is None:  # 响应失败时抛出可读异常。
+        raise RuntimeError(f"Qwen 偏好分析调用失败，response={response}")  # 暴露调用失败信息。
+    raw_text = _message_text(message)  # 取出返回文本。
     logger.info("preference.analysis.response_raw user_id=%s raw=%s", user_id, raw_text)  # 记录原始响应。
-    parsed = _parse_llm_json(raw_text)  # 解析 JSON。
+    parsed = _PREFERENCE_ANALYSIS_PARSER.parse(raw_text)  # 使用LangChain解析并映射到Pydantic模型。
     normalized = _normalize_llm_result(parsed)  # 标准化返回结果。
     axis_updates = _merge_confidence(normalized["axis_updates"], similarity_by_axis)  # 融合置信度。
     result = {  # 组装最终结果。

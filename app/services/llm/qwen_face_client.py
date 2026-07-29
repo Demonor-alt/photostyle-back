@@ -1,13 +1,16 @@
 import base64  # 引入base64用于把本地图片转换为可传输的字符串
-import json  # 引入json用于解析模型返回内容
+import json  # 引入json用于复制默认结构
 import mimetypes  # 引入mimetypes用于推断图片类型
 import os  # 引入os用于读取环境变量
 from pathlib import Path  # 引入Path用于处理本地图片路径
+from typing import Any
 
 import dashscope  # 引入DashScope SDK用于调用Qwen多模态接口
+from langchain_core.output_parsers import PydanticOutputParser
+from pydantic import BaseModel, Field
 
-from app.utils.runtime import DEBUG_ENABLED, logger  # 引入调试开关和统一日志器
-from app.services.llm.qwen_client import get_api_key
+from app.services.llm.qwen_client import get_api_key, get_qwen_response_message
+from app.utils.runtime import logger  # 引入统一日志器
 
 dashscope.base_http_api_url = os.getenv("DASHSCOPE_API_URL")  # 设置DashScope基础API地址
 
@@ -92,6 +95,34 @@ _SIMPLE_ANALYSIS_ENUMS = {
 }
 
 
+class FaceAnalysisOutput(BaseModel):
+    description: str = Field(default="")
+    skin: str = Field(default="")
+    facial_sense: str = Field(default="")
+    face_shape: str = Field(default="")
+    facial_features: list[str] = Field(default_factory=list)
+    proportions: list[str] = Field(default_factory=list)
+    style_keywords: list[str] = Field(default_factory=list)
+    has_face: bool = Field(default=True)
+    simple_analysis: dict[str, Any] = Field(default_factory=dict)
+
+
+_FACE_ANALYSIS_PARSER = PydanticOutputParser(pydantic_object=FaceAnalysisOutput)
+
+
+def _message_text(message: Any) -> str:
+    content = getattr(message, "content", "")
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        text_parts: list[str] = []
+        for item in content:
+            if isinstance(item, dict) and "text" in item:
+                text_parts.append(str(item["text"]))
+        return "\n".join(text_parts)
+    return str(content)
+
+
 def _build_image_payload(image_path: str | None, image_mime_type: str | None = None) -> dict | None:  # 构建Qwen图片输入
     if not image_path:  # 如果没有图片路径则直接返回空
         return None  # 表示当前没有可识别图片
@@ -101,37 +132,10 @@ def _build_image_payload(image_path: str | None, image_mime_type: str | None = N
     if not local_path.exists():  # 如果本地文件不存在
         return None  # 返回空，让上层走兜底逻辑
     mime_type, _ = mimetypes.guess_type(str(local_path))  # 推断文件类型
-    mime_type = mime_type or "image/jpeg"  # 如果推断失败则默认按JPEG处理
+    mime_type = image_mime_type or mime_type or "image/jpeg"  # 优先使用调用方传入类型，推断失败则默认按JPEG处理
     encoded = base64.b64encode(local_path.read_bytes()).decode("utf-8")  # 读取图片并转为Base64字符串
     return {"image": f"data:{mime_type};base64,{encoded}"}  # 按DashScope可识别格式返回
 
-
-def _clean_json_text(text: str) -> str:  # 清理模型返回中的Markdown代码块包裹
-    cleaned = text.strip()  # 去掉首尾空白
-    if cleaned.startswith("```"):
-        cleaned = cleaned[3:]  # 去掉开头的代码块标记
-        cleaned = cleaned.lstrip()  # 去掉语言标记前的空白
-        if cleaned.startswith("json"):
-            cleaned = cleaned[4:]  # 去掉```json中的json标记
-        cleaned = cleaned.lstrip("\n\r\t ")  # 去掉多余空白和换行
-    if cleaned.endswith("```"):
-        cleaned = cleaned[:-3]  # 去掉结尾的代码块标记
-    return cleaned.strip()  # 返回清理后的文本
-
-
-def _extract_json(text: str) -> dict:  # 从模型原文中提取JSON对象
-    cleaned = _clean_json_text(text)  # 先清理Markdown代码块
-    try:  # 尝试直接解析
-        return json.loads(cleaned)  # 如果原文就是JSON则直接返回
-    except Exception as exc:  # 如果不是纯JSON
-        start = cleaned.find("{")  # 查找JSON起始位置
-        end = cleaned.rfind("}")  # 查找JSON结束位置
-        if start >= 0 and end > start:  # 如果找到了完整的JSON片段
-            try:  # 再次尝试解析片段
-                return json.loads(cleaned[start : end + 1])  # 返回JSON对象
-            except Exception as inner_exc:  # 如果仍然失败
-                raise ValueError("Qwen 返回内容无法解析为 JSON") from inner_exc  # 直接暴露解析错误
-        raise ValueError("Qwen 返回内容不是有效 JSON") from exc  # 没有可解析片段时直接报错
 
 
 def _normalize_list(value: object) -> list[str]:  # 将任意值规范为字符串列表
@@ -205,6 +209,7 @@ def analyze_image(image_path: str | None, image_mime_type: str | None = None) ->
         raise ValueError(f"没有可用图片输入，image_path={image_path}")  # 直接暴露图片输入问题
     prompt = (  # 构建严格JSON提示词
         "请严格只返回JSON，不要输出任何解释、代码块、Markdown或多余文本。"
+        f"请遵循以下格式要求：{_FACE_ANALYSIS_PARSER.get_format_instructions()}"
         "JSON字段必须包含description、skin、facial_sense、face_shape、facial_features、proportions、style_keywords、has_face、simple_analysis。"
         "description是对人物整体长相特点的简短中文描述。"
         "skin是肤色特点的简短中文描述，例如冷皮/暖皮/中性皮，以及肤质瑕疵。"
@@ -244,29 +249,24 @@ def analyze_image(image_path: str | None, image_mime_type: str | None = None) ->
         )  # 调用结束
 
         logger.info("qwen.analyze.raw_response=%s", response)  # 记录原始响应到日志
-        if response is None:  # 如果SDK直接返回空
-            raise ValueError("Qwen 接口返回为空")  # 直接暴露空响应
-        if getattr(response, "status_code", 200) not in (200, None):  # 如果SDK带状态码且不是成功
-            raise ValueError(f"Qwen 调用失败，status_code={getattr(response, 'status_code', None)}, response={response}")  # 暴露状态码
-        if getattr(response, "output", None) is None:  # 如果没有output
-            raise ValueError(f"Qwen 返回缺少 output 字段: {response}")  # 暴露结构问题
-        if getattr(response.output, "choices", None) is None:  # 如果没有choices
-            raise ValueError(f"Qwen 返回缺少 choices 字段: {response}")  # 暴露结构问题
-        content = response.output.choices[0].message.content[0]["text"]  # 提取模型返回的文本内容
+        message = get_qwen_response_message(response)  # 统一判断Qwen响应并提取message
+        if message is None:  # 如果响应失败或结构异常
+            raise ValueError(f"Qwen 调用失败，response={response}")  # 暴露调用失败
+        content = _message_text(message)  # 提取模型返回的文本内容
+        parsed = _FACE_ANALYSIS_PARSER.parse(content)  # 使用LangChain解析并映射到Pydantic模型
     except Exception as exc:  # 如果调用或解析前步骤失败
         raise RuntimeError(f"Qwen 图片分析调用失败: {exc}") from exc  # 统一包装为可读错误
-    payload = _extract_json(content)  # 解析JSON对象
-    has_face = bool(payload.get("has_face", True))  # 提取是否有人脸
+    has_face = parsed.has_face  # 提取是否有人脸
     if not has_face:  # 如果图片中没有可识别的人脸
         raise ValueError("图片未检测到人脸")  # 直接返回给前端的统一错误提示
-    description = str(payload.get("description", "")).strip()  # 提取整体描述
-    skin = str(payload.get("skin", "")).strip()  # 提取肤色特点
-    facial_sense = str(payload.get("facial_sense", "")).strip()  # 提取五官量感
-    face_shape = str(payload.get("face_shape", "")).strip()  # 提取脸型特点
-    facial_features = _normalize_list(payload.get("facial_features"))  # 提取五官特点
-    proportions = _normalize_list(payload.get("proportions"))  # 提取比例特点
-    style_keywords = _normalize_list(payload.get("style_keywords"))  # 提取风格关键词
-    simple_analysis = _normalize_simple_analysis(payload.get("simple_analysis"))  # 提取并规范化简化分析
+    description = parsed.description.strip()  # 提取整体描述
+    skin = parsed.skin.strip()  # 提取肤色特点
+    facial_sense = parsed.facial_sense.strip()  # 提取五官量感
+    face_shape = parsed.face_shape.strip()  # 提取脸型特点
+    facial_features = _normalize_list(parsed.facial_features)  # 提取五官特点
+    proportions = _normalize_list(parsed.proportions)  # 提取比例特点
+    style_keywords = _normalize_list(parsed.style_keywords)  # 提取风格关键词
+    simple_analysis = _normalize_simple_analysis(parsed.simple_analysis)  # 提取并规范化简化分析
     result = {  # 返回标准化结果
         "description": description,  # 人物整体描述
         "skin": skin,  # 肤色特点
