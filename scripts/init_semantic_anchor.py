@@ -31,7 +31,7 @@ DEFAULT_SAMPLES_PER_AXIS = 15  # 每个语义轴默认生成的样本数量。
 REQUIRED_EXPRESSION_TYPES = ["用户喜欢表达", "用户拒绝表达", "口语表达", "隐含表达", "场景表达"]  # 约束模型输出的表达类型集合。
 
 logger = logging.getLogger("init_semantic_anchor")  # 创建脚本专用日志器。
-dashscope.base_http_api_url = "https://dashscope.aliyuncs.com/api/v1"  # 指定 DashScope API 地址。
+dashscope.base_http_api_url = os.getenv("DASHSCOPE_API_URL") # 指定 DashScope API 地址。
 
 def setup_logging() -> None:
     """初始化脚本日志格式。"""  # 配置全局日志输出样式。

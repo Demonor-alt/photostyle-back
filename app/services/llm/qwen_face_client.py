@@ -9,7 +9,7 @@ import dashscope  # 引入DashScope SDK用于调用Qwen多模态接口
 from app.utils.runtime import DEBUG_ENABLED, logger  # 引入调试开关和统一日志器
 
 
-dashscope.base_http_api_url = "https://dashscope.aliyuncs.com/api/v1"  # 设置DashScope基础API地址
+dashscope.base_http_api_url = os.getenv("DASHSCOPE_API_URL")  # 设置DashScope基础API地址
 
 _SIMPLE_ANALYSIS_TEMPLATE: dict = {
     "脸型": "鹅蛋脸",

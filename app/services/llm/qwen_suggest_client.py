@@ -8,7 +8,7 @@ import dashscope  # 引入DashScope配置对象
 from app.schemas.history import SuggestRequest, SuggestResponse  # 引入请求响应模型
 
 
-dashscope.base_http_api_url = 'https://dashscope.aliyuncs.com/api/v1'  # 配置百炼API地址
+dashscope.base_http_api_url = os.getenv("DASHSCOPE_API_URL")  # 配置百炼API地址
 
 
 # 统一调用 Qwen 生成拍照穿搭建议，避免业务层直接依赖 SDK 细节
