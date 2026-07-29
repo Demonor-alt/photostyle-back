@@ -16,8 +16,8 @@ from fastapi.exceptions import RequestValidationError  # 请求校验异常
 from fastapi.middleware.cors import CORSMiddleware  # 跨域请求
 from fastapi.responses import JSONResponse  # JSON响应
 
-from app.api.user import router as user_router  # 用户路由
-from app.api.history import router as history_router  # 历史记录路由
+from app.api.user_controller import router as user_router  # 用户路由
+from app.api.history_controller import router as history_router  # 历史记录路由
 from app.utils.runtime import DEBUG_ENABLED, LOG_KEEP_DAYS, LOG_LEVEL_NAME, LOG_MAX_BYTES, logger  # 日志
 from app.db import init_db  # 数据库初始化
 
