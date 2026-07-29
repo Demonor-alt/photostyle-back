@@ -7,13 +7,10 @@ from fastapi.responses import StreamingResponse  # 引入流式响应
 from app.schemas.base import ApiResponse
 from app.schemas.history import (
     DatabaseStatusResponse,
-    HistoryListResponse,
-    HistoryRecord,
-    MessageResponse,
-    SuggestApiData,
-    SuggestFormParams,
     SuggestRequest,
 )
+from app.schemas.dto.history_dto import (SuggestFormParams,HistoryRecord,FeedbackUpdateRequest)
+from app.schemas.vo.history_vo import (SuggestApiData, HistoryListResponse)
 from app.schemas.error import (
     FeedbackError,
     HistorySaveError,
@@ -30,13 +27,6 @@ from app.rabbitmq.feedback_tasks import publish_feedback_updated  # 引入反馈
 from app.api.utils import save_upload_file, parse_tag_list  # 引入工具函数
 
 router = APIRouter()  # 创建路由实例
-
-
-class FeedbackUpdateRequest(BaseModel):
-    makeup_rating: int = 0
-    outfit_rating: int = 0
-    pose_rating: int = 0
-    feedback_comment: str | None = None
 
 
 @router.post("/suggest", response_model=ApiResponse[SuggestApiData])  # 定义建议生成接口
@@ -142,13 +132,10 @@ async def database_status() -> ApiResponse[DatabaseStatusResponse]:  # 返回数
     )
 
 
-@router.post("/history", response_model=ApiResponse[MessageResponse])  # 定义历史记录保存接口
-async def create_history(record: HistoryRecord) -> ApiResponse[MessageResponse]:  # 接收历史记录并保存
+@router.post("/history", response_model=ApiResponse[None])  # 定义历史记录保存接口
+async def create_history(record: HistoryRecord) -> ApiResponse[None]:  # 接收历史记录并保存
     save_history_record(record.model_dump())  # 将记录写入存储
-    return ApiResponse[MessageResponse](
-        message="历史记录保存成功",
-        data=MessageResponse(message="历史记录保存成功"),
-    )
+    return ApiResponse[None](message="历史记录保存成功")
 
 
 @router.get("/history", response_model=ApiResponse[HistoryListResponse])  # 定义历史记录查询接口
@@ -160,8 +147,8 @@ async def get_history(user_id: int | None = None) -> ApiResponse[HistoryListResp
     )
 
 
-@router.post("/history/{history_id}/feedback", response_model=MessageResponse)
-async def update_history(history_id: int, payload: FeedbackUpdateRequest) -> MessageResponse:
+@router.post("/history/{history_id}/feedback", response_model=ApiResponse[None])
+async def update_history(history_id: int, payload: FeedbackUpdateRequest) -> ApiResponse[None]:
     update_history_feedback(  # 更新历史记录并获取最新数据
         history_id,  # 传入历史ID
         payload.makeup_rating,  # 传入妆容评分
@@ -178,4 +165,4 @@ async def update_history(history_id: int, payload: FeedbackUpdateRequest) -> Mes
         logger.exception("feedback.update.publish_failed history_id=%s, error=%s", history_id, str(exc))
         raise FeedbackError(hint=f"发布反馈更新事件失败: {exc}") from exc
     
-    return MessageResponse(message="点评保存成功")
+    return ApiResponse[None](message="点评保存成功")

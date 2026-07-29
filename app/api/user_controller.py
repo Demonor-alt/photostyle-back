@@ -14,14 +14,9 @@ from app.schemas.error import (
     UploadError,
     UploadUnknownError,
 )
-from app.schemas.user import (
-    LoginRequest,
-    RegisterRequest,
-    UpdateUserProfileRequest,
-    UploadPhotoData,
-    UploadPhotoFormParams,
-    UserResponse,
-)
+
+from app.schemas.dto.user_dto import (UploadPhotoFormParams,RegisterRequest,LoginRequest,UpdateUserProfileRequest)
+from app.schemas.vo.user_vo import (UploadPhotoData,UserResponse)
 from app.db.user_mapper import (
     ensure_user,
     get_user_profile,
