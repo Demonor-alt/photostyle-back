@@ -91,7 +91,6 @@ def load_semantic_axes(config_path: Path) -> list[dict[str, str]]:
 def generate_axis_anchors(axis: dict[str, str]) -> list[dict[str, Any]]:
     """调用 LLM 为单个语义轴生成语义锚点样本。"""  # 为某个语义轴生成本地候选锚点。
     api_key = os.getenv("DASHSCOPE_API_KEY")  # 读取 DashScope API Key。
-    logger.info("DASHSCOPE_API_KEY=%s", api_key)  # 记录 API Key 日志。
     if not api_key:  # 判断 API Key 是否配置。
         raise ValueError("未配置 DASHSCOPE_API_KEY，无法生成 Semantic Anchor Library 锚点")  # 未配置时停止执行。
 

@@ -1,8 +1,11 @@
 from typing import List, Optional  # 引入类型标注用于描述字段结构
 
 from pydantic import Field  # 引入Field用于定义字段默认值
+from typing import Any  # 引入Any用于描述任意类型
 
 from .base import BaseSchema  # 引入公共Schema基类
+from pydantic import BaseModel, Field  # 引入Pydantic模型基类和字段定义
+
 
 
 # qwen_suggest_client.py请求
@@ -29,6 +32,15 @@ class SuggestResponse(BaseSchema):  # 定义拍照建议响应模型
     summary: Optional[str] = None  # 整体总结
 
 
-class DatabaseStatusResponse(BaseSchema):  # 定义数据库状态响应模型
-    connected: bool  # 是否已连接
-    message: str  # 状态信息
+# qwen_face_client.py请求
+class FaceAnalysisOutput(BaseModel):  # 定义人脸分析输出的数据结构
+    description: str = Field(default="")  # 人物整体描述
+    skin: str = Field(default="")  # 肤色和肤质描述
+    facial_sense: str = Field(default="")  # 五官量感描述
+    face_shape: str = Field(default="")  # 脸型描述
+    facial_features: list[str] = Field(default_factory=list)  # 五官特点列表
+    proportions: list[str] = Field(default_factory=list)  # 比例特点列表
+    style_keywords: list[str] = Field(default_factory=list)  # 风格关键词列表
+    has_face: bool = Field(default=True)  # 是否存在可识别人脸
+    simple_analysis: dict[str, Any] = Field(default_factory=dict)  # 结构化简化分析结果
+

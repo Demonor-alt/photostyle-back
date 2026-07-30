@@ -5,23 +5,12 @@ from pydantic import BaseModel  # 引入Pydantic基础模型
 from fastapi.responses import StreamingResponse  # 引入流式响应
 
 from app.schemas.base import ApiResponse
-from app.schemas.history import (
-    DatabaseStatusResponse,
-    SuggestRequest,
-)
+from app.schemas.llm import (SuggestRequest)
 from app.schemas.dto.history_dto import (SuggestFormParams,HistoryRecord,FeedbackUpdateRequest)
-from app.schemas.vo.history_vo import (SuggestApiData, HistoryListResponse)
-from app.schemas.error import (
-    FeedbackError,
-    HistorySaveError,
-)
+from app.schemas.vo.history_vo import (SuggestApiData, HistoryListResponse, DatabaseStatusResponse)
+from app.schemas.error import (FeedbackError,HistorySaveError)
 from app.services.orchestrator import format_sse_event, run_pipeline  # 引入调度入口和SSE格式化器
-from app.db.history_mapper import (  # 引入历史数据服务
-    get_database_status,
-    list_history_records,
-    save_history_record,
-    update_history_feedback,
-)
+from app.db.history_mapper import (get_database_status,list_history_records,save_history_record,update_history_feedback)
 from app.db.user_mapper import get_user_profile  # 引入用户查询服务
 from app.rabbitmq.feedback_tasks import publish_feedback_updated  # 引入反馈异步任务发布器
 from app.api.utils import save_upload_file, parse_tag_list  # 引入工具函数

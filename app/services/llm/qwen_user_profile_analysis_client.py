@@ -7,40 +7,34 @@ from typing import Any  # 用于表示任意类型。
 
 import dashscope  # 引入 DashScope SDK。
 from dashscope import Generation  # 引入文本生成能力。
-from langchain_core.output_parsers import PydanticOutputParser
-from pydantic import BaseModel, Field
+from langchain_core.output_parsers import PydanticOutputParser  # 引入 Pydantic 输出解析器。
+from pydantic import BaseModel, Field  # 引入 Pydantic 基类和字段工具。
 
 from app.rag.semantic_anchor_milvus_service import search_similar_anchor  # 引入 Milvus 语义锚点检索方法。
-from app.services.llm.qwen_client import get_api_key, get_qwen_response_message
-from app.utils.runtime import logger
+from app.services.llm.qwen_client import get_api_key, get_qwen_response_content  # 引入统一的 Qwen 鉴权和响应文本提取方法。
+from app.utils.runtime import logger  # 引入统一日志器。
 
 
 # 配置 DashScope 百炼 API 地址，保持和现有 Qwen 服务一致。  # 让 SDK 指向正确的服务地址。
 dashscope.base_http_api_url = os.getenv("DASHSCOPE_API_URL")  # 设置 DashScope 基础 API 地址。
-QWEN_MODEL = os.getenv("QWEN_BASE_MODEL")
-DEFAULT_ANCHOR_TOP_K = os.getenv("DEFAULT_ANCHOR_TOP_K")  #默认召回语义锚点数量
+QWEN_MODEL = os.getenv("QWEN_BASE_MODEL")  # 读取偏好分析模型名称。
+DEFAULT_ANCHOR_TOP_K = os.getenv("DEFAULT_ANCHOR_TOP_K")  # 默认召回语义锚点数量。
 
 
-class PreferenceAxisUpdateOutput(BaseModel):
-    axis_name: str = Field(default="")
-    value: float = Field(default=0.0)
-    confidence: float = Field(default=0.0)
-    reason: str = Field(default="")
+class PreferenceAxisUpdateOutput(BaseModel):  # 单条语义轴更新的输出结构
+    axis_name: str = Field(default="")  # 语义轴名称
+    value: float = Field(default=0.0)  # 偏好变化值
+    confidence: float = Field(default=0.0)  # 大模型判断置信度
+    reason: str = Field(default="")  # 判断原因
 
 
-class PreferenceAnalysisOutput(BaseModel):
-    axis_updates: list[PreferenceAxisUpdateOutput] = Field(default_factory=list)
-    avoid_patterns: list[str] = Field(default_factory=list)
-    success_patterns: list[str] = Field(default_factory=list)
+class PreferenceAnalysisOutput(BaseModel):  # 用户偏好分析的整体输出结构
+    axis_updates: list[PreferenceAxisUpdateOutput] = Field(default_factory=list)  # 语义轴更新列表
+    avoid_patterns: list[str] = Field(default_factory=list)  # 需要避免的偏好模式
+    success_patterns: list[str] = Field(default_factory=list)  # 用户正向偏好模式
 
 
-_PREFERENCE_ANALYSIS_PARSER = PydanticOutputParser(pydantic_object=PreferenceAnalysisOutput)
-
-
-def _message_text(message: Any) -> str:
-    content = getattr(message, "content", "")
-    return content if isinstance(content, str) else str(content)
-
+_PREFERENCE_ANALYSIS_PARSER = PydanticOutputParser(pydantic_object=PreferenceAnalysisOutput)  # 定义偏好分析结果解析器
 
 def _safe_json_dumps(value: Any) -> str:  # 将任意对象安全序列化为 JSON 字符串。
     """将任意业务对象稳定序列化为中文 JSON 字符串。"""  # 说明该函数用于稳定序列化。
@@ -225,10 +219,9 @@ def analyze_user_preference(  # 对单个用户评论进行偏好分析。
         result_format="message",  # 结果格式为 message。
         enable_thinking=True,  # 开启思考能力。
     )  # 请求结束。
-    message = get_qwen_response_message(response)  # 统一判断Qwen响应并提取message。
-    if message is None:  # 响应失败时抛出可读异常。
+    raw_text = get_qwen_response_content(response)  # 统一判断响应并提取 message.content 文本。
+    if raw_text is None:  # 响应失败时抛出可读异常。
         raise RuntimeError(f"Qwen 偏好分析调用失败，response={response}")  # 暴露调用失败信息。
-    raw_text = _message_text(message)  # 取出返回文本。
     logger.info("preference.analysis.response_raw user_id=%s raw=%s", user_id, raw_text)  # 记录原始响应。
     parsed = _PREFERENCE_ANALYSIS_PARSER.parse(raw_text)  # 使用LangChain解析并映射到Pydantic模型。
     normalized = _normalize_llm_result(parsed)  # 标准化返回结果。

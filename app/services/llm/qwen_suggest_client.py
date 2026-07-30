@@ -7,7 +7,7 @@ import dashscope  # 引入DashScope配置对象
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain_core.exceptions import OutputParserException
 
-from app.schemas.history import SuggestRequest, SuggestResponse  # 引入请求响应模型
+from app.schemas.llm import SuggestRequest, SuggestResponse  # 引入请求响应模型
 from app.services.llm.qwen_client import get_api_key, get_qwen_response_message
 
 dashscope.base_http_api_url = os.getenv("DASHSCOPE_API_URL")  # 配置百炼API地址

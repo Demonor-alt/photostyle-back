@@ -11,7 +11,7 @@ from typing import TypedDict, Any
 
 from typing_extensions import NotRequired
 
-from app.schemas.history import SuggestRequest
+from app.schemas.llm import SuggestRequest
 from app.services.llm.qwen_suggest_client import generate_suggestion
 from langgraph.graph import END, StateGraph  # type: ignore[import-not-found]
 
