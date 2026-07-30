@@ -5,7 +5,7 @@ from app.utils.runtime import logger
 from typing import Any  # 用于表示任意类型。
 
 from app.db.database import SessionLocal  # 引入数据库会话工厂。
-from app.models.user_profile import DEFAULT_SEMANTIC_AXES, UserProfile, default_semantic_axes  # 引入用户画像模型与默认语义轴。
+from app.schemas.models.user_profile import DEFAULT_SEMANTIC_AXES, UserProfile, default_semantic_axes  # 引入用户画像模型与默认语义轴。
 
 # 评分只能影响指定语义轴，避免评分被错误扩散到无关画像维度。  # 控制评分影响范围。
 RATING_AXIS_SCOPE = {  # 定义评分字段到语义轴的约束映射。
