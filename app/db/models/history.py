@@ -19,18 +19,3 @@ class PhotoStyleHistory(Base):
     feedback_comment = Column(Text, nullable=True, comment="点评内容")
     reviewed = Column(Boolean, nullable=False, default=False, comment="是否已点评")
     created_at = Column(DateTime, nullable=False, default=lambda: datetime.now(ZoneInfo("Asia/Shanghai")).replace(tzinfo=None), comment="创建时间")
-
-    def to_dict(self):
-        """转换为字典"""
-        return {
-            "id": self.id,
-            "user_id": self.user_id,
-            "input_data": self.input_data,
-            "output_data": self.output_data,
-            "makeup_rating": self.makeup_rating,
-            "outfit_rating": self.outfit_rating,
-            "pose_rating": self.pose_rating,
-            "feedback_comment": self.feedback_comment,
-            "reviewed": self.reviewed,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-        }

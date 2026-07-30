@@ -1,7 +1,7 @@
 from app.schemas.base import BaseSchema  # 引入公共Schema基类
 from typing import List, Optional  # 引入类型标注用于描述字段结构
 
-from app.schemas.dto.history_dto import HistoryRecord
+from app.schemas.orm.history import History
 
 # /suggest 接口数据
 class SuggestApiData(BaseSchema):
@@ -10,11 +10,11 @@ class SuggestApiData(BaseSchema):
     makeup: Optional[List[str]] = None
     poses: Optional[List[str]] = None
     summary: Optional[str] = None
-    history: Optional[dict] = None
+    history: Optional[History] = None
 
 # /history的get接口数据
 class HistoryListResponse(BaseSchema):
-    items: List[HistoryRecord]
+    items: List[History]
 
 # /db/status 接口数据
 class DatabaseStatusResponse(BaseSchema):

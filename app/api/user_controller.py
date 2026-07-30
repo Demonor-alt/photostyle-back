@@ -64,9 +64,9 @@ async def upload_photo(
     return ApiResponse[UploadPhotoData](
         message="照片上传成功",
         data=UploadPhotoData(
-            username=user["username"],
-            photo_path=user.get("photo_path"),
-            photo_mime_type=user.get("photo_mime_type"),
+            username=user.username,
+            photo_path=user.photo_path,
+            photo_mime_type=user.photo_mime_type,
             face_analysis=face_analysis,
             simple_analysis=simple_analysis,
         ),
@@ -77,7 +77,7 @@ async def upload_photo(
 async def register_user(payload: RegisterRequest) -> ApiResponse[UserResponse]:  # 接收注册请求
     try:
         user = ensure_user(payload.username, payload.password)  # 创建或获取用户
-        return ApiResponse[UserResponse](message="注册成功", data=UserResponse(**user))
+        return ApiResponse[UserResponse](message="注册成功", data=UserResponse.model_validate(user))
     except ValueError as exc:
         raise RegisterError(str(exc)) from exc
     except Exception as exc:
@@ -88,7 +88,7 @@ async def register_user(payload: RegisterRequest) -> ApiResponse[UserResponse]: 
 async def login(payload: LoginRequest) -> ApiResponse[UserResponse]:  # 接收登录请求
     try:
         user = login_user(payload.username, payload.password)  # 校验用户名密码
-        return ApiResponse[UserResponse](message="登录成功", data=UserResponse(**user))
+        return ApiResponse[UserResponse](message="登录成功", data=UserResponse.model_validate(user))
     except ValueError as exc:
         message = str(exc)
         if message == "用户名或密码错误":
@@ -101,7 +101,7 @@ async def login(payload: LoginRequest) -> ApiResponse[UserResponse]:  # 接收�
 @router.get("/auth/me", response_model=ApiResponse[UserResponse])  # 定义当前用户接口
 async def me(username: str) -> ApiResponse[UserResponse]:  # 通过用户名获取当前用户
     user = get_user_profile(username)  # 查询用户资料
-    return ApiResponse[UserResponse](message="用户信息获取成功", data=UserResponse(**user))
+    return ApiResponse[UserResponse](message="用户信息获取成功", data=UserResponse.model_validate(user))
 
 
 @router.put("/auth/me", response_model=ApiResponse[UserResponse])  # 定义资料修改接口
@@ -114,7 +114,7 @@ async def update_me(username: str, payload: UpdateUserProfileRequest) -> ApiResp
         photo_mime_type=payload.photo_mime_type,
         face_analysis=payload.face_analysis,
     )
-    return ApiResponse[UserResponse](message="用户资料更新成功", data=UserResponse(**user))
+    return ApiResponse[UserResponse](message="用户资料更新成功", data=UserResponse.model_validate(user))
 
 
 @router.get("/photos/preview")  # 定义本地图片预览接口

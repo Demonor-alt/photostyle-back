@@ -1,9 +1,9 @@
 """用户服务层 - 使用 ORM"""
 import os
 from passlib.context import CryptContext
-from sqlalchemy.orm import Session
-from app.db.models.user import User
+from app.db.models.user import User as UserModel
 from app.db.database import SessionLocal
+from app.schemas.orm.user import User
 
 _pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -38,32 +38,32 @@ def verify_password(password: str, password_hash: str) -> bool:
     return _pwd_context.verify(password, password_hash)
 
 
-def ensure_user(username: str, password: str | None = None) -> dict:
+def ensure_user(username: str, password: str | None = None) -> User:
     """确保用户存在"""
     db = SessionLocal()
     try:
-        user = db.query(User).filter(User.username == username).first()
+        user = db.query(UserModel).filter(UserModel.username == username).first()
         if user:
-            return user.to_dict()
+            return User.model_validate(user)
         
         plain_password = password or _default_password()
-        new_user = User(
+        new_user = UserModel(
             username=username,
             password_hash=hash_password(plain_password)
         )
         db.add(new_user)
         db.commit()
         db.refresh(new_user)
-        return new_user.to_dict()
+        return User.model_validate(new_user)
     finally:
         db.close()
 
 
-def login_user(username: str, password: str) -> dict:
+def login_user(username: str, password: str) -> User:
     """登录校验"""
     db = SessionLocal()
     try:
-        user = db.query(User).filter(User.username == username).first()
+        user = db.query(UserModel).filter(UserModel.username == username).first()
         if not user:
             raise ValueError("用户名或密码错误")
         
@@ -73,40 +73,40 @@ def login_user(username: str, password: str) -> dict:
         except ValueError as exc:
             raise ValueError(str(exc)) from exc
         
-        return user.to_dict()
+        return User.model_validate(user)
     finally:
         db.close()
 
 
-def get_user_profile(username: str) -> dict:
+def get_user_profile(username: str) -> User:
     """获取用户资料"""
     db = SessionLocal()  # 创建数据库会话
     try:  # 开始查询
-        user = db.query(User).filter(User.username == username).first()  # 按用户名查找用户
+        user = db.query(UserModel).filter(UserModel.username == username).first()  # 按用户名查找用户
         if not user:  # 如果用户不存在
             raise ValueError("用户不存在")  # 直接抛出异常
-        return user.to_dict()  # 返回用户字典
+        return User.model_validate(user)  # 返回用户Schema
     finally:  # 无论如何都关闭会话
         db.close()  # 关闭数据库会话
 
 
-def get_user_profile_by_id(user_id: int) -> dict:
+def get_user_profile_by_id(user_id: int) -> User:
     """根据用户ID获取用户资料"""
     db = SessionLocal()  # 创建数据库会话
     try:  # 开始查询
-        user = db.query(User).filter(User.id == user_id).first()  # 按ID查找用户
+        user = db.query(UserModel).filter(UserModel.id == user_id).first()  # 按ID查找用户
         if not user:  # 如果用户不存在
             raise ValueError("用户不存在")  # 直接抛出异常
-        return user.to_dict()  # 返回用户字典
+        return User.model_validate(user)  # 返回用户Schema
     finally:  # 无论如何都关闭会话
         db.close()  # 关闭数据库会话
 
 
-def upsert_user_photo(username: str, photo_path: str, photo_mime_type: str | None = None, face_analysis: dict | None = None, simple_analysis: dict | None = None) -> dict:
+def upsert_user_photo(username: str, photo_path: str, photo_mime_type: str | None = None, face_analysis: dict | None = None, simple_analysis: dict | None = None) -> User:
     """保存或更新用户照片"""
     db = SessionLocal()
     try:
-        user = db.query(User).filter(User.username == username).first()
+        user = db.query(UserModel).filter(UserModel.username == username).first()
         if not user:
             raise ValueError("用户不存在")
         
@@ -117,7 +117,7 @@ def upsert_user_photo(username: str, photo_path: str, photo_mime_type: str | Non
         
         db.commit()
         db.refresh(user)
-        return user.to_dict()
+        return User.model_validate(user)
     finally:
         db.close()
 
@@ -131,16 +131,16 @@ def update_user_profile(
     photo_mime_type: str | None = None, 
     face_analysis: dict | None = None,
     simple_analysis: dict | None = None
-) -> dict:
+) -> User:
     """更新用户资料"""
     db = SessionLocal()
     try:
-        user = db.query(User).filter(User.username == username).first()
+        user = db.query(UserModel).filter(UserModel.username == username).first()
         if not user:
             raise ValueError("用户不存在")
         
         if new_username and new_username != username:
-            existing = db.query(User).filter(User.username == new_username).first()
+            existing = db.query(UserModel).filter(UserModel.username == new_username).first()
             if existing:
                 raise ValueError("用户名已存在")
             user.username = new_username
@@ -158,7 +158,7 @@ def update_user_profile(
         
         db.commit()
         db.refresh(user)
-        return user.to_dict()
+        return User.model_validate(user)
     finally:
         db.close()
 
@@ -167,7 +167,7 @@ def get_user_photo_payload(username: str) -> dict | None:
     """获取用户照片数据"""
     db = SessionLocal()
     try:
-        user = db.query(User).filter(User.username == username).first()
+        user = db.query(UserModel).filter(UserModel.username == username).first()
         if not user:
             return None
         return {

@@ -50,7 +50,7 @@ async def suggest(  # 定义支持表单上传的建议接口
         input_data["extra_tags"] = []
 
         history = save_history_record({
-            "user_id": user["id"],
+            "user_id": user.id,
             "input_data": input_data,
             "output_data": result.model_dump(),
             "makeup_rating": 0,
