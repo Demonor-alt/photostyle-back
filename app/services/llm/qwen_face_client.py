@@ -9,43 +9,10 @@ from langchain_core.output_parsers import PydanticOutputParser  # 引入Pydantic
 from app.services.llm.qwen_client import get_api_key, get_qwen_response_content  # 引入统一的Qwen鉴权和响应文本提取方法
 from app.utils.runtime import logger  # 引入统一日志器
 from app.schemas.llm import FaceAnalysisOutput  # 引入人脸分析输出模型
+from app.config.enums.face_analysis import SIMPLE_ANALYSIS_ENUMS  # 引入人脸分析枚举
 
 dashscope.base_http_api_url = os.getenv("DASHSCOPE_API_URL")  # 设置DashScope基础API地址
 QWEN_FACE_MODEL = os.getenv("QWEN_FACE_MODEL")  # 读取人脸分析模型名称
-
-
-_SIMPLE_ANALYSIS_ENUMS = {
-    "脸型": {"鹅蛋脸", "圆脸", "方脸", "长脸", "菱形脸", "心形脸"},
-    "线条感": {"柔和", "适中", "锐利"},
-    "五官量感": {"轻", "中", "重"},
-    "面部对比度": {"低", "中", "高"},
-    "眼睛": {
-        "眼型": {"杏眼", "丹凤眼", "圆眼", "细长眼"},
-        "卧蚕": {"有", "无"},
-        "眼尾": {"上扬", "平直", "下垂"},
-    },
-    "眉毛": {
-        "眉型": {"剑眉", "柳叶眉", "平眉", "弯眉"},
-        "浓淡": {"浓", "适中", "淡"},
-        "眉峰": {"明显", "平缓"},
-        "是否断眉": {"是", "否"},
-    },
-    "鼻子": {
-        "鼻型": {"高挺", "扁平", "鹰钩", "蒜头"},
-        "鼻翼": {"窄", "适中", "宽"},
-    },
-    "嘴巴": {
-        "唇型": {"薄唇", "适中", "厚唇"},
-        "唇形": {"M型", "自然"},
-        "嘴角": {"上扬", "平直", "下垂"},
-    },
-    "耳朵": {
-        "大小": {"小", "适中", "大"},
-        "贴合度": {"贴合", "外扩"},
-    },
-    "肤色": {"冷白", "暖白", "自然肤色", "偏黄", "偏黑"},
-    "肤质": {"细腻", "一般", "粗糙", "有瑕疵"},
-}
 
 _FACE_ANALYSIS_PARSER = PydanticOutputParser(pydantic_object=FaceAnalysisOutput)
 
@@ -104,7 +71,7 @@ def analyze_image(image_path: str | None, image_mime_type: str | None = None) ->
         "simple_analysis必须是严格结构化JSON对象，字段固定且只能从给定枚举中选择，不能生成新类别，不要重复description内容。"
         "simple_analysis结构如下：基础结构包含脸型、线条感、五官量感、面部对比度；五官特征包含眼睛、眉毛、鼻子、嘴巴、耳朵；皮肤与气质包含肤色、肤质、气质。"
         "其中基础字段和子字段必须选择一个最匹配的枚举值。"
-        f"枚举如下：{{{_build_simple_analysis_enum_text(_SIMPLE_ANALYSIS_ENUMS)}}}"
+        f"枚举如下：{{{_build_simple_analysis_enum_text(SIMPLE_ANALYSIS_ENUMS)}}}"
     )  # 设定分析提示词
     messages = [  # 构建多模态消息
         {  # 构造用户消息
