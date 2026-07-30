@@ -120,47 +120,70 @@ def upsert_user_photo(username: str, photo_path: str, photo_mime_type: str | Non
         return User.model_validate(user)
     finally:
         db.close()
+        
 
-
-def update_user_profile(
-    username: str, 
-    *, 
-    new_username: str | None = None, 
-    password: str | None = None, 
-    photo_path: str | None = None, 
-    photo_mime_type: str | None = None, 
+def update_user_profile_by_id(
+    user_id: int,
+    *,
+    new_username: str | None = None,
+    password: str | None = None,
+    photo_path: str | None = None,
+    photo_mime_type: str | None = None,
     face_analysis: dict | None = None,
     simple_analysis: dict | None = None
 ) -> User:
-    """更新用户资料"""
+    """根据用户ID更新用户资料"""
     db = SessionLocal()
     try:
-        user = db.query(UserModel).filter(UserModel.username == username).first()
+        user = db.query(UserModel).filter(UserModel.id == user_id).first()
         if not user:
             raise ValueError("用户不存在")
-        
-        if new_username and new_username != username:
-            existing = db.query(UserModel).filter(UserModel.username == new_username).first()
-            if existing:
-                raise ValueError("用户名已存在")
-            user.username = new_username
-        
-        if password:
-            user.password_hash = hash_password(password)
-        if photo_path is not None:
-            user.photo_path = photo_path
-        if photo_mime_type is not None:
-            user.photo_mime_type = photo_mime_type
-        if face_analysis is not None:
-            user.face_analysis = face_analysis
-        if simple_analysis is not None:
-            user.simple_analysis = simple_analysis
-        
-        db.commit()
-        db.refresh(user)
-        return User.model_validate(user)
+        return _update_user_profile_record(
+            db,
+            user,
+            new_username=new_username,
+            password=password,
+            photo_path=photo_path,
+            photo_mime_type=photo_mime_type,
+            face_analysis=face_analysis,
+            simple_analysis=simple_analysis,
+        )
     finally:
         db.close()
+
+
+def _update_user_profile_record(
+    db,
+    user: UserModel,
+    *,
+    new_username: str | None = None,
+    password: str | None = None,
+    photo_path: str | None = None,
+    photo_mime_type: str | None = None,
+    face_analysis: dict | None = None,
+    simple_analysis: dict | None = None
+) -> User:
+    original_username = user.username
+    if new_username and new_username != original_username:
+        existing = db.query(UserModel).filter(UserModel.username == new_username).first()
+        if existing:
+            raise ValueError("用户名已存在")
+        user.username = new_username
+    
+    if password:
+        user.password_hash = hash_password(password)
+    if photo_path is not None:
+        user.photo_path = photo_path
+    if photo_mime_type is not None:
+        user.photo_mime_type = photo_mime_type
+    if face_analysis is not None:
+        user.face_analysis = face_analysis
+    if simple_analysis is not None:
+        user.simple_analysis = simple_analysis
+    
+    db.commit()
+    db.refresh(user)
+    return User.model_validate(user)
 
 
 def get_user_photo_payload(username: str) -> dict | None:

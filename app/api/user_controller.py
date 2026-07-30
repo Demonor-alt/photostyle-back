@@ -19,10 +19,10 @@ from app.schemas.dto.user_dto import (UploadPhotoFormParams,RegisterRequest,Logi
 from app.schemas.vo.user_vo import (UploadPhotoData,UserResponse)
 from app.db.user_mapper import (
     ensure_user,
-    get_user_profile,
+    get_user_profile_by_id,
     login_user,
     upsert_user_photo,
-    update_user_profile,
+    update_user_profile_by_id,
 )
 from app.services.llm.qwen_face_client import analyze_image  # 引入Qwen图片分析服务
 from app.api.utils import save_upload_file  # 引入文件上传工具函数
@@ -99,15 +99,15 @@ async def login(payload: LoginRequest) -> ApiResponse[UserResponse]:  # 接收�
 
 
 @router.get("/auth/me", response_model=ApiResponse[UserResponse])  # 定义当前用户接口
-async def me(username: str) -> ApiResponse[UserResponse]:  # 通过用户名获取当前用户
-    user = get_user_profile(username)  # 查询用户资料
+async def me(userId: int) -> ApiResponse[UserResponse]:  # 通过用户ID获取当前用户
+    user = get_user_profile_by_id(userId)  # 查询用户资料
     return ApiResponse[UserResponse](message="用户信息获取成功", data=UserResponse.model_validate(user))
 
 
 @router.put("/auth/me", response_model=ApiResponse[UserResponse])  # 定义资料修改接口
-async def update_me(username: str, payload: UpdateUserProfileRequest) -> ApiResponse[UserResponse]:  # 修改当前用户资料
-    user = update_user_profile(
-        username,
+async def update_me(userId: int, payload: UpdateUserProfileRequest) -> ApiResponse[UserResponse]:  # 修改当前用户资料
+    user = update_user_profile_by_id(
+        userId,
         new_username=payload.new_username,
         password=payload.password,
         photo_path=payload.photo_path,
