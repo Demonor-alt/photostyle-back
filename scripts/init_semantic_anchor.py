@@ -19,6 +19,8 @@ import dashscope  # 用于调用通义千问等大模型接口。
 import yaml  # 用于读取语义轴配置文件。
 from dashscope import Generation  # 用于发起文本生成请求。
 from dotenv import load_dotenv  # 用于脚本独立运行时加载 back/.env。
+from langchain_core.output_parsers import PydanticOutputParser  # 用于清洗 LLM 输出并解析为 Pydantic 模型。
+from pydantic import BaseModel, Field, RootModel  # 用于定义 LLM 输出结构并做字段映射。
 
 # 允许从任意目录直接运行脚本时，也能导入 app 包并读取 back/.env。
 BACKEND_ROOT = Path(__file__).resolve().parents[1]  # 定位后端根目录，便于拼接配置与输出文件路径。
@@ -32,6 +34,23 @@ REQUIRED_EXPRESSION_TYPES = ["用户喜欢表达", "用户拒绝表达", "口语
 
 logger = logging.getLogger("init_semantic_anchor")  # 创建脚本专用日志器。
 dashscope.base_http_api_url = os.getenv("DASHSCOPE_API_URL") # 指定 DashScope API 地址。
+QWEN_SEMANTIC_ANCHOR_MODEL = os.getenv("QWEN_SEMANTIC_ANCHOR_MODEL")
+
+
+class GeneratedAnchor(BaseModel):
+    """LLM 生成的单条语义锚点结构。"""  # 通过 Pydantic 约束并承接模型输出字段。
+
+    text: str = Field(description="用户表达文本")  # 用户自然语言表达内容。
+    axis_name: str = Field(description="语义轴名称")  # 当前锚点所属语义轴。
+    value: float = Field(description="-1 到 1 之间的语义轴取值")  # LLM 输出的原始轴值。
+    category: str = Field(description="表达类型分类")  # 表达所属类型。
+
+
+class GeneratedAnchorList(RootModel[list[GeneratedAnchor]]):
+    """LLM 生成的语义锚点数组结构。"""  # 使用 RootModel 让 JSON 数组直接映射为 Pydantic 模型。
+
+
+ANCHOR_OUTPUT_PARSER = PydanticOutputParser(pydantic_object=GeneratedAnchorList)  # 复用 LangChain 解析器完成清洗与模型映射。
 
 def setup_logging() -> None:
     """初始化脚本日志格式。"""  # 配置全局日志输出样式。
@@ -88,21 +107,22 @@ def generate_axis_anchors(axis: dict[str, str]) -> list[dict[str, Any]]:
             "value_range": "-1 到 1，负数表示拒绝/降低该语义轴，正数表示喜欢/增强该语义轴，0 表示中性或不明显。",  # 约束数值语义。
             "output": "只输出 JSON 数组，不要 Markdown，不要解释。每项字段必须包含 text、axis_name、value、category。",  # 强制模型输出格式。
             "category_hint": "category 必须从 expression_types 中选择。",  # 提供类别和方向提示。
+            "format_instructions": ANCHOR_OUTPUT_PARSER.get_format_instructions(),  # 注入 LangChain 解析器生成的 Pydantic 格式说明。
         },  # requirements 结束。
         "example": {"text": "我不喜欢网红浓妆", "axis_name": "makeup_intensity", "value": -0.6, "category": "用户拒绝表达"},  # 给模型一个参考示例。
     }  # prompt 构造结束。
     logger.info("开始生成语义锚点 axis=%s", axis_name,)  # 记录生成开始日志。
     response = Generation.call(  # 调用大模型生成接口。
         api_key=api_key,  # 传入 API Key。
-        model=os.getenv("SEMANTIC_ANCHOR_LLM_MODEL", "qwen3.7-max"),  # 指定模型名称，默认 qwen3.7-max。
+        model=QWEN_SEMANTIC_ANCHOR_MODEL,  # 指定模型名称，默认 qwen3.7-max。
         messages=[  # 构造对话消息列表。
-            {"role": "system", "content": "你是语义检索知识库初始化助手。严格只输出 JSON 数组。"},  # 系统提示，要求只输出 JSON。
+            {"role": "system", "content": "你是语义检索知识库初始化助手。"},  # 系统提示，强调输出结果将由解析器接管。
             {"role": "user", "content": json.dumps(prompt, ensure_ascii=False)},  # 用户提示，传入 prompt JSON。
         ],  # 消息列表结束。
         result_format="message",  # 指定返回格式为 message。
     )  # 接口调用结束。
     raw_text = response.output.choices[0].message.content  # 提取模型返回文本。
-    generated = _extract_json_array(raw_text)  # 从返回文本中解析 JSON 数组。
+    generated = _parse_generated_anchors(raw_text)  # 使用 LangChain Output Parser 解析为 Pydantic 模型。
 
     anchors: list[dict[str, Any]] = []  # 保存过滤后的锚点。
     used_texts: set[str] = set()  # 用于去重文本内容。
@@ -118,25 +138,14 @@ def generate_axis_anchors(axis: dict[str, str]) -> list[dict[str, Any]]:
     logger.info("语义锚点生成完成 axis=%s count=%s", axis_name, len(anchors))  # 记录生成完成日志。
     return anchors[:DEFAULT_SAMPLES_PER_AXIS]  # 返回限定数量的锚点。
 
-def _extract_json_array(raw_text: str) -> list[dict[str, Any]]:
-    """从 LLM 返回文本中提取 JSON 数组。"""  # 从模型输出中尽量恢复 JSON 数组。
-    text = raw_text.strip()  # 去掉首尾空白。
-    if text.startswith("```"):  # 判断是否包裹在 Markdown 代码块中。
-        text = text.strip("`").strip()  # 去掉代码块标记。
-        if text.startswith("json"):  # 判断是否带有 json 标识。
-            text = text[4:].strip()  # 去掉 json 标识。
-    try:  # 尝试直接解析为 JSON。
-        payload = json.loads(text)  # 将文本解析为 JSON。
-    except json.JSONDecodeError:  # 如果直接解析失败，则尝试截取数组部分。
-        start = text.find("[")  # 查找数组起始位置。
-        end = text.rfind("]")  # 查找数组结束位置。
-        if start < 0 or end <= start:  # 判断是否存在可用数组片段。
-            raise ValueError("LLM 返回内容中未找到 JSON 数组")  # 未找到数组时抛错。
-        payload = json.loads(text[start : end + 1])  # 解析截取出的数组内容。
+def _parse_generated_anchors(raw_text: str) -> list[dict[str, Any]]:
+    """使用 LangChain Output Parser 解析 LLM 返回的锚点数组。"""  # 由 LangChain 负责清洗文本、提取 JSON 并映射到 Pydantic 模型。
+    try:  # 尝试通过 LangChain 内置解析器处理模型输出。
+        parsed = ANCHOR_OUTPUT_PARSER.parse(raw_text)  # 解析器会自动处理常见 Markdown 包裹和 JSON 提取。
+    except Exception as exc:  # 将解析异常转换为更贴近脚本语义的错误。
+        raise ValueError(f"LLM 返回内容无法解析为语义锚点 JSON 数组: {exc}") from exc  # 保留原始异常便于排查。
 
-    if not isinstance(payload, list):  # 判断解析结果是否为列表。
-        raise ValueError("LLM 返回内容必须是 JSON 数组")  # 结果不是数组时抛错。
-    return [item for item in payload if isinstance(item, dict)]  # 仅保留字典项。
+    return [anchor.model_dump() for anchor in parsed.root]  # 将 Pydantic 模型转换为后续规范化流程使用的字典。
 
 
 def _normalize_axis_value(value: Any) -> float:

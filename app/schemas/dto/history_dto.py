@@ -34,8 +34,8 @@ class SuggestFormParams:  # 定义建议生成表单参数（用于FastAPI依赖
 class HistoryRecord(BaseSchema):  # 定义历史记录模型
     id: Optional[int] = None  # 历史记录ID
     user_id: int  # 用户ID
-    input_data: dict  # 输入数据（不再绑定SuggestRequest）
-    output_data: dict  # 输出数据（支持旧格式和新格式）
+    input_data: dict  # 输入数据
+    output_data: dict  # 输出数据
     makeup_rating: int = 0  # 妆容评分
     outfit_rating: int = 0  # 穿搭评分
     pose_rating: int = 0  # 姿势评分

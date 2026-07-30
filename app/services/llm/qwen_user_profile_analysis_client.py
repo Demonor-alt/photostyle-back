@@ -17,7 +17,7 @@ from app.utils.runtime import logger
 
 # 配置 DashScope 百炼 API 地址，保持和现有 Qwen 服务一致。  # 让 SDK 指向正确的服务地址。
 dashscope.base_http_api_url = os.getenv("DASHSCOPE_API_URL")  # 设置 DashScope 基础 API 地址。
-
+QWEN_MODEL = os.getenv("QWEN_BASE_MODEL")
 DEFAULT_ANCHOR_TOP_K = os.getenv("DEFAULT_ANCHOR_TOP_K")  #默认召回语义锚点数量
 
 
@@ -220,7 +220,7 @@ def analyze_user_preference(  # 对单个用户评论进行偏好分析。
     )  # 日志记录结束。
     response = Generation.call(  # 调用 Qwen 生成接口。
         api_key=api_key,  # 传入 API Key。
-        model="qwen3-max",  # 选择模型。
+        model=QWEN_MODEL,  # 选择模型。
         messages=messages,  # 传入消息列表。
         result_format="message",  # 结果格式为 message。
         enable_thinking=True,  # 开启思考能力。

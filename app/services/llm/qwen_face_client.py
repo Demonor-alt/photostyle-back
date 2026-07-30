@@ -13,6 +13,7 @@ from app.services.llm.qwen_client import get_api_key, get_qwen_response_message
 from app.utils.runtime import logger  # 引入统一日志器
 
 dashscope.base_http_api_url = os.getenv("DASHSCOPE_API_URL")  # 设置DashScope基础API地址
+QWEN_FACE_MODEL = os.getenv("QWEN_FACE_MODEL")
 
 _SIMPLE_ANALYSIS_TEMPLATE: dict = {
     "脸型": "鹅蛋脸",
@@ -240,11 +241,11 @@ def analyze_image(image_path: str | None, image_mime_type: str | None = None) ->
         }  # 用户消息结束
     ]  # 消息列表结束
     try:  # 捕获调用过程中的全部异常
-        logger.info("qwen.analyze.calling model=%s image_path=%s", "qwen3.5-ocr", image_path)  # 记录调用开始
+        logger.info("qwen.analyze.calling model=%s image_path=%s", "QWEN_FACE_MODEL", image_path)  # 记录调用开始
         
         response = dashscope.MultiModalConversation.call(  # 调用Qwen多模态能力
             api_key=get_api_key(),  # 传入DashScope密钥
-            model="qwen3.7-plus",  # 指定Qwen模型
+            model=QWEN_FACE_MODEL,  # 指定Qwen模型
             messages=messages,  # 传入消息列表
         )  # 调用结束
 
