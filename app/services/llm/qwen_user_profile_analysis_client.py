@@ -190,10 +190,8 @@ def analyze_user_preference(  # 对单个用户评论进行偏好分析。
     history_profile: Any | None = None,  # 历史画像。
     top_k: int = DEFAULT_ANCHOR_TOP_K,  # 召回数量。
 ) -> dict[str, Any]:  # 返回结构化分析结果。
-    """分析用户评论中的偏好变化，返回结构化结果但不写数据库。"""  # 说明该函数只分析不落库。
-    comment = comment.strip()  # 去掉评论首尾空白。
-    if not comment:  # 如果评论为空。
-        return {"user_id": user_id, "axis_updates": [], "avoid_patterns": [], "success_patterns": [], "semantic_anchors": []}  # 返回空结果。
+    """分析用户评论中的偏好变化，返回结构化结果但不写数据库。"""
+
 
     api_key = get_api_key()  # 读取并校验 API Key。
 

@@ -1,6 +1,6 @@
 import os  # 引入os用于读取环境变量
 from sqlalchemy import text  # 引入text用于执行原生SQL
-from app.schemas.models.history import PhotoStyleHistory  # 引入历史模型
+from app.db.models.history import PhotoStyleHistory  # 引入历史模型
 from app.db.database import SessionLocal, engine  # 引入数据库会话和引擎
 
 

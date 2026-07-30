@@ -11,7 +11,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.db.database import SessionLocal, init_db
 from app.db.history_mapper import get_history_record
-from app.schemas.models.processed_event import ProcessedEvent
+from app.db.models.processed_event import ProcessedEvent
 from app.services.llm.qwen_user_profile_analysis_client import analyze_user_preference
 from app.services.user_profile_update_service import update_user_profile
 from app.utils.runtime import logger

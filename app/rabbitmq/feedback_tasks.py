@@ -66,6 +66,9 @@ def publish_feedback_updated(history_id: int) -> None:  # 定义发布反馈更�
         logger.info("连接关闭成功:feedback.publish.connection_closed history_id=%s", history_id)
 
 
+# -------------------------- 反馈更新事件处理 --------------------------
+
+
 def handle_feedback_updated(history_id: int) -> None:  # 定义处理反馈更新事件的函数，接收历史记录ID参数
     current_history = get_history_record(history_id)  # 获取历史记录信息
     user_id = int(current_history["user_id"])  # 从历史记录中提取用户ID并转换为整数
