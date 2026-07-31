@@ -1,4 +1,4 @@
-"""用户画像模型定义"""
+"""用户人格画像模型定义"""
 from datetime import datetime
 
 from sqlalchemy import BigInteger, Column, DateTime, ForeignKey, JSON
@@ -7,7 +7,6 @@ from sqlalchemy.orm import relationship
 from app.db.database import Base
 
 
-# 用户画像语义轴默认值，用于记录用户长期偏好的可解释维度
 DEFAULT_SEMANTIC_AXES = {
     "color_saturation": 0,
     "accessory_level": 0,
@@ -30,11 +29,11 @@ def default_semantic_axes() -> dict:
     return dict(DEFAULT_SEMANTIC_AXES)
 
 
-class UserProfile(Base):
-    """用户画像表模型"""
-    __tablename__ = "user_profiles"
+class UserPersona(Base):
+    """用户人格画像表模型"""
+    __tablename__ = "user_persona"
 
-    id = Column(BigInteger, primary_key=True, autoincrement=True, comment="用户画像ID")
+    id = Column(BigInteger, primary_key=True, autoincrement=True, comment="用户人格画像ID")
     user_id = Column(
         BigInteger,
         ForeignKey("photo_style_users.id", ondelete="CASCADE"),
@@ -49,11 +48,10 @@ class UserProfile(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, comment="创建时间")
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间")
 
-    # 建立与用户表的一对一关系，便于后续画像服务按用户读取画像
-    user = relationship("User", backref="profile")
+    user = relationship("User", backref="persona")
 
     def to_dict(self) -> dict:
-        """转换为字典，供后续服务层返回或日志记录使用。"""
+        """转换为字典，供服务层返回或日志记录使用。"""
         return {
             "id": self.id,
             "user_id": self.user_id,

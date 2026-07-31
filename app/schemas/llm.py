@@ -33,7 +33,7 @@ class SuggestResponse(BaseSchema):  # 定义拍照建议响应模型
 
 
 # qwen_face_client.py请求
-class FaceAnalysisOutput(BaseModel):  # 定义人脸分析输出的数据结构
+class FaceAnalysisRequest(BaseModel):  # 定义人脸分析输出的数据结构
     description: str = Field(default="")  # 人物整体描述
     skin: str = Field(default="")  # 肤色和肤质描述
     facial_sense: str = Field(default="")  # 五官量感描述
@@ -43,4 +43,18 @@ class FaceAnalysisOutput(BaseModel):  # 定义人脸分析输出的数据结构
     style_keywords: list[str] = Field(default_factory=list)  # 风格关键词列表
     has_face: bool = Field(default=True)  # 是否存在可识别人脸
     simple_analysis: dict[str, Any] = Field(default_factory=dict)  # 结构化简化分析结果
+
+
+# qwen_face_client.py响应
+class FaceAnalysisRespionse(BaseModel):  # 定义人脸分析响应结构
+    description: str = Field(default="")  # 人物整体描述
+    skin: str = Field(default="")  # 肤色特点
+    facial_sense: str = Field(default="")  # 五官量感
+    face_shape: str = Field(default="")  # 脸型特点
+    facial_features: list[str] = Field(default_factory=list)  # 五官特点
+    proportions: list[str] = Field(default_factory=list)  # 比例特点
+    style_keywords: list[str] = Field(default_factory=list)  # 风格关键词
+    has_face: bool = Field(default=True)  # 是否有人脸
+    simple_analysis: dict[str, Any] = Field(default_factory=dict)  # 简化分析
+    raw: str = Field(default="")  # 原始模型输出
 

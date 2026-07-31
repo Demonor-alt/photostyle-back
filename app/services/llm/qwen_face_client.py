@@ -8,13 +8,13 @@ from langchain_core.output_parsers import PydanticOutputParser  # 引入Pydantic
 
 from app.services.llm.qwen_client import get_api_key, get_qwen_response_content  # 引入统一的Qwen鉴权和响应文本提取方法
 from app.utils.runtime import logger  # 引入统一日志器
-from app.schemas.llm import FaceAnalysisOutput  # 引入人脸分析输出模型
+from app.schemas.llm import FaceAnalysisRequest, FaceAnalysisRespionse  # 引入人脸分析输出模型
 from app.config.enums.face_analysis import SIMPLE_ANALYSIS_ENUMS  # 引入人脸分析枚举
 
 dashscope.base_http_api_url = os.getenv("DASHSCOPE_API_URL")  # 设置DashScope基础API地址
 QWEN_FACE_MODEL = os.getenv("QWEN_FACE_MODEL")  # 读取人脸分析模型名称
 
-_FACE_ANALYSIS_PARSER = PydanticOutputParser(pydantic_object=FaceAnalysisOutput)
+_FACE_ANALYSIS_PARSER = PydanticOutputParser(pydantic_object=FaceAnalysisRequest)
 
 
 def _build_simple_analysis_enum_text(enums: dict[str, object]) -> str:  # 将简化分析枚举递归展开为提示词文本
@@ -52,7 +52,7 @@ def _normalize_list(value: object) -> list[str]:  # 将任意值规范为字符�
     return []  # 其他类型直接返回空列表
 
 
-def analyze_image(image_path: str | None, image_mime_type: str | None = None) -> dict:  # 调用Qwen分析图片并提取人物特征
+def analyze_image(image_path: str | None, image_mime_type: str | None = None) -> FaceAnalysisRespionse:  # 调用Qwen分析图片并提取人物特征
     image_payload = _build_image_payload(image_path, image_mime_type=image_mime_type)  # 构建图片输入
     if image_payload is None:  # 如果没有有效图片
         raise ValueError(f"没有可用图片输入，image_path={image_path}")  # 直接暴露图片输入问题
@@ -99,17 +99,17 @@ def analyze_image(image_path: str | None, image_mime_type: str | None = None) ->
     has_face = parsed.has_face  # 提取是否有人脸
     if not has_face:  # 如果图片中没有可识别的人脸
         raise ValueError("图片未检测到人脸")  # 直接返回给前端的统一错误提示
-    result = {  # 返回标准化结果
-        "description": parsed.description.strip(),  # 人物整体描述
-        "skin": parsed.skin.strip(),  # 肤色特点
-        "facial_sense": parsed.facial_sense.strip(),  # 五官量感
-        "face_shape": parsed.face_shape.strip(),  # 脸型特点
-        "facial_features": _normalize_list(parsed.facial_features),  # 五官特点
-        "proportions": _normalize_list(parsed.proportions),  # 比例特点
-        "style_keywords": _normalize_list(parsed.style_keywords),  # 风格关键词
-        "has_face": has_face,  # 是否有人脸
-        "simple_analysis": parsed.simple_analysis,  # 简化分析
-        "raw": content,  # 原始模型输出
-    }  # 返回结果结束
+    result = FaceAnalysisRespionse(  # 返回标准化结果
+        description=parsed.description.strip(),  # 人物整体描述
+        skin=parsed.skin.strip(),  # 肤色特点
+        facial_sense=parsed.facial_sense.strip(),  # 五官量感
+        face_shape=parsed.face_shape.strip(),  # 脸型特点
+        facial_features=_normalize_list(parsed.facial_features),  # 五官特点
+        proportions=_normalize_list(parsed.proportions),  # 比例特点
+        style_keywords=_normalize_list(parsed.style_keywords),  # 风格关键词
+        has_face=has_face,  # 是否有人脸
+        simple_analysis=parsed.simple_analysis,  # 简化分析
+        raw=content,  # 原始模型输出
+    )  # 返回结果结束
     logger.info("qwen.analyze.output=%s", result)  # 记录结构化结果到日志
     return result  # 返回结果结束

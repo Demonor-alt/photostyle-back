@@ -4,8 +4,8 @@ from __future__ import annotations  # 启用前向引用类型注解。
 from app.utils.runtime import logger
 from typing import Any  # 用于表示任意类型。
 
-from app.db.database import SessionLocal  # 引入数据库会话工厂。
-from app.db.models.user_profile import DEFAULT_SEMANTIC_AXES, UserProfile, default_semantic_axes  # 引入用户画像模型与默认语义轴。
+from app.db.models.user_persona import DEFAULT_SEMANTIC_AXES, default_semantic_axes  # 引入用户人格画像默认语义轴。
+from app.db.user_persona_mapper import get_user_persona_by_id, update_user_persona_by_id  # 引入用户人格画像数据库操作。
 
 # 评分只能影响指定语义轴，避免评分被错误扩散到无关画像维度。  # 控制评分影响范围。
 RATING_AXIS_SCOPE = {  # 定义评分字段到语义轴的约束映射。
@@ -62,22 +62,6 @@ def _append_unique(existing: Any, additions: list[str], max_items: int = 100) ->
             result.append(item)  # 追加到结果中。
             seen.add(item)  # 记录到集合。
     return result[-max_items:]  # 仅保留最后最多 max_items 条。
-
-
-def _get_or_create_profile(db, user_id: int) -> UserProfile:  # 获取或创建用户画像。
-    """获取用户画像，不存在时创建默认画像。"""  # 说明函数行为。
-    profile = db.query(UserProfile).filter(UserProfile.user_id == user_id).first()  # 查询已有画像。
-    if profile:  # 如果找到了画像。
-        return profile  # 直接返回。
-    profile = UserProfile(  # 构造新画像对象。
-        user_id=user_id,  # 设置用户 ID。
-        semantic_axes=default_semantic_axes(),  # 初始化默认语义轴。
-        success_patterns=[],  # 初始化成功模式为空。
-        avoid_patterns=[],  # 初始化避雷模式为空。
-    )  # 新画像对象创建结束。
-    db.add(profile)  # 添加到会话。
-    db.flush()  # 刷新以便获取数据库状态。
-    return profile  # 返回新建画像。
 
 
 def _score_all_success(history_scores: dict[str, Any]) -> bool:  # 判断是否全部高分。
@@ -199,6 +183,9 @@ def update_user_profile(  # 更新用户画像主入口。
     input_data = input_data or {}  # 确保输入数据是字典。
     output_data = output_data or {}  # 确保输出数据是字典。
     history_profile = history_profile or {}  # 确保历史画像是字典。
+    existing_persona = get_user_persona_by_id(int(user_id))  # 读取数据库中已有的人格画像。
+    if existing_persona:  # 如果数据库已有画像。
+        history_profile = existing_persona.model_dump(mode="json") | history_profile  # 优先保留调用方显式传入的历史画像字段。
 
     normalized_updates = _normalize_axis_updates(axis_updates or [], history_scores)  # 规范轴更新。
     llm_avoid_patterns = _normalize_patterns(avoid_patterns)  # 规范 LLM 传入的避雷模式。
@@ -206,41 +193,26 @@ def update_user_profile(  # 更新用户画像主入口。
     generated_success_patterns = _build_success_patterns(input_data, output_data, history_scores)  # 生成成功模式。
     generated_avoid_patterns = _build_low_score_avoid_patterns(input_data, output_data, history_scores)  # 生成避雷模式。
 
-    db = SessionLocal()  # 创建数据库会话。
+    old_axes = history_profile.get("semantic_axes") or {}  # 选择旧语义轴数据来源。
+    semantic_axes = _apply_axis_updates(old_axes, normalized_updates)  # 应用轴更新。
+    updated_success_patterns = _append_unique(  # 更新成功模式。
+        history_profile.get("success_patterns"),  # 现有成功模式。
+        llm_success_patterns + generated_success_patterns,  # 合并新模式。
+    )  # 成功模式更新结束。
+    updated_avoid_patterns = _append_unique(  # 更新避雷模式。
+        history_profile.get("avoid_patterns"),  # 现有避雷模式。
+        llm_avoid_patterns + generated_avoid_patterns,  # 合并新模式。
+    )  # 避雷模式更新结束。
+
     try:  # 开始数据库操作。
-        profile = _get_or_create_profile(db, int(user_id))  # 获取或创建用户画像。
-        old_axes = profile.semantic_axes or history_profile.get("semantic_axes") or {}  # 选择旧语义轴数据来源。
-        profile.semantic_axes = _apply_axis_updates(old_axes, normalized_updates)  # 应用轴更新。
-        profile.success_patterns = _append_unique(  # 更新成功模式。
-            profile.success_patterns,  # 现有成功模式。
-            llm_success_patterns + generated_success_patterns,  # 合并新模式。
-        )  # 成功模式更新结束。
-        profile.avoid_patterns = _append_unique(  # 更新避雷模式。
-            profile.avoid_patterns,  # 现有避雷模式。
-            llm_avoid_patterns + generated_avoid_patterns,  # 合并新模式。
-        )  # 避雷模式更新结束。
-        db.commit()  # 提交事务。
-        db.refresh(profile)  # 刷新对象状态。
-        result = profile.to_dict()  # 转为字典结果。
-        logger.info("user_profile.updated user_id=%s result=%s", user_id, result)  # 记录更新结果。
+        result = update_user_persona_by_id(  # 通过 mapper 更新或创建用户人格画像。
+            user_id=int(user_id),  # 设置用户 ID。
+            semantic_axes=semantic_axes,  # 设置语义轴。
+            success_patterns=updated_success_patterns,  # 设置成功模式。
+            avoid_patterns=updated_avoid_patterns,  # 设置避雷模式。
+        ).model_dump(mode="json")  # 转为字典结果。
+        logger.info("user_persona.updated user_id=%s result=%s", user_id, result)  # 记录更新结果。
         return result  # 返回结果。
     except Exception:  # 捕获所有异常。
-        db.rollback()  # 回滚事务。
-        logger.exception("user_profile.update_failed user_id=%s", user_id)  # 记录异常日志。
+        logger.exception("user_persona.update_failed user_id=%s", user_id)  # 记录异常日志。
         raise  # 继续向上抛出异常。
-    finally:  # 无论成功失败都执行。
-        db.close()  # 关闭数据库会话。
-
-
-def update_user_profile_from_analysis(payload: dict[str, Any]) -> dict[str, Any]:  # 兼容分析结果字典入口。
-    """兼容偏好分析结果字典的更新入口。"""  # 说明函数用途。
-    return update_user_profile(  # 调用主更新函数。
-        user_id=int(payload["user_id"]),  # 读取用户 ID。
-        axis_updates=payload.get("axis_updates"),  # 读取轴更新。
-        history_scores=payload.get("history_scores"),  # 读取历史评分。
-        history_profile=payload.get("history_profile"),  # 读取历史画像。
-        input_data=payload.get("input_data"),  # 读取输入数据。
-        output_data=payload.get("output_data"),  # 读取输出数据。
-        avoid_patterns=payload.get("avoid_patterns"),  # 读取避雷模式。
-        success_patterns=payload.get("success_patterns"),  # 读取成功模式。
-    )  # 返回更新结果。
