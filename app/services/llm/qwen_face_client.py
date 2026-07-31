@@ -6,7 +6,7 @@ from pathlib import Path  # 引入Path用于处理本地图片路径
 import dashscope  # 引入DashScope SDK用于调用Qwen多模态接口
 from langchain_core.output_parsers import PydanticOutputParser  # 引入Pydantic输出解析器
 
-from app.services.llm.qwen_client import get_api_key, get_qwen_response_content  # 引入统一的Qwen鉴权和响应文本提取方法
+from app.services.llm.qwen_client import get_api_key, get_qwen_response_content, normalize_list,build_simple_analysis_enum_text  # 引入统一的Qwen鉴权和响应文本提取方法
 from app.utils.runtime import logger  # 引入统一日志器
 from app.schemas.llm import FaceAnalysisRequest, FaceAnalysisRespionse  # 引入人脸分析输出模型
 from app.config.enums.face_analysis import SIMPLE_ANALYSIS_ENUMS  # 引入人脸分析枚举
@@ -15,18 +15,6 @@ dashscope.base_http_api_url = os.getenv("DASHSCOPE_API_URL")  # 设置DashScope�
 QWEN_FACE_MODEL = os.getenv("QWEN_FACE_MODEL")  # 读取人脸分析模型名称
 
 _FACE_ANALYSIS_PARSER = PydanticOutputParser(pydantic_object=FaceAnalysisRequest)
-
-
-def _build_simple_analysis_enum_text(enums: dict[str, object]) -> str:  # 将简化分析枚举递归展开为提示词文本
-    lines: list[str] = []  # 收集每一层枚举描述
-    for key, value in enums.items():  # 遍历当前层级
-        if isinstance(value, dict):  # 如果是子结构，继续递归展开
-            child_text = _build_simple_analysis_enum_text(value)  # 生成子结构文本
-            lines.append(f'"{key}":{{{child_text}}}')  # 拼接当前层级
-        else:  # 如果是枚举集合
-            options = ",".join(f'"{item}"' for item in sorted(value))  # 排序后生成稳定输出
-            lines.append(f'"{key}":[{options}]')  # 拼接枚举数组
-    return ",".join(lines)  # 返回当前层级的JSON片段
 
 
 def _build_image_payload(image_path: str | None, image_mime_type: str | None = None) -> dict | None:  # 构建Qwen图片输入
@@ -41,15 +29,6 @@ def _build_image_payload(image_path: str | None, image_mime_type: str | None = N
     mime_type = image_mime_type or mime_type or "image/jpeg"  # 优先使用调用方传入类型，推断失败则默认按JPEG处理
     encoded = base64.b64encode(local_path.read_bytes()).decode("utf-8")  # 读取图片并转为Base64字符串
     return {"image": f"data:{mime_type};base64,{encoded}"}  # 按DashScope可识别格式返回
-
-
-def _normalize_list(value: object) -> list[str]:  # 将任意值规范为字符串列表
-    if isinstance(value, list):  # 如果本来就是列表
-        return [str(item).strip() for item in value if str(item).strip()]  # 转换并过滤空值
-    if isinstance(value, str):  # 如果是字符串
-        parts = [part.strip() for part in value.replace("，", ",").split(",")]  # 按中英文逗号切分
-        return [part for part in parts if part]  # 过滤空项
-    return []  # 其他类型直接返回空列表
 
 
 def analyze_image(image_path: str | None, image_mime_type: str | None = None) -> FaceAnalysisRespionse:  # 调用Qwen分析图片并提取人物特征
@@ -71,7 +50,7 @@ def analyze_image(image_path: str | None, image_mime_type: str | None = None) ->
         "simple_analysis必须是严格结构化JSON对象，字段固定且只能从给定枚举中选择，不能生成新类别，不要重复description内容。"
         "simple_analysis结构如下：基础结构包含脸型、线条感、五官量感、面部对比度；五官特征包含眼睛、眉毛、鼻子、嘴巴、耳朵；皮肤与气质包含肤色、肤质、气质。"
         "其中基础字段和子字段必须选择一个最匹配的枚举值。"
-        f"枚举如下：{{{_build_simple_analysis_enum_text(SIMPLE_ANALYSIS_ENUMS)}}}"
+        f"枚举如下：{{{build_simple_analysis_enum_text(SIMPLE_ANALYSIS_ENUMS)}}}"
     )  # 设定分析提示词
     messages = [  # 构建多模态消息
         {  # 构造用户消息
@@ -104,9 +83,9 @@ def analyze_image(image_path: str | None, image_mime_type: str | None = None) ->
         skin=parsed.skin.strip(),  # 肤色特点
         facial_sense=parsed.facial_sense.strip(),  # 五官量感
         face_shape=parsed.face_shape.strip(),  # 脸型特点
-        facial_features=_normalize_list(parsed.facial_features),  # 五官特点
-        proportions=_normalize_list(parsed.proportions),  # 比例特点
-        style_keywords=_normalize_list(parsed.style_keywords),  # 风格关键词
+        facial_features=normalize_list(parsed.facial_features),  # 五官特点
+        proportions=normalize_list(parsed.proportions),  # 比例特点
+        style_keywords=normalize_list(parsed.style_keywords),  # 风格关键词
         has_face=has_face,  # 是否有人脸
         simple_analysis=parsed.simple_analysis,  # 简化分析
         raw=content,  # 原始模型输出

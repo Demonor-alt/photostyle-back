@@ -58,3 +58,43 @@ def get_qwen_response_content(response: Any) -> str | None:
         return None
     return _message_content_to_text(_get_attr_or_item(message, "content", ""))
 
+
+
+#-------------------------------------- tool --------------------------------------
+
+
+#region
+# 情况1：正常数组
+#_normalize_list(["大眼睛", "高鼻梁", "薄唇"])
+# # → ["大眼睛", "高鼻梁", "薄唇"]
+# # 情况2：逗号分隔的字符串
+# _normalize_list("大眼睛，高鼻梁,薄唇")
+# # → ["大眼睛", "高鼻梁", "薄唇"]
+# 情况3：有空格或空值的脏数据
+# _normalize_list(["大眼睛", " ", "", "高鼻梁"])
+# → ["大眼睛", "高鼻梁"]
+# 情况4：模型抽风返回了 null 或数字
+# _normalize_list(None)
+# → []
+# _normalize_list(123)
+# → []
+#endregion
+def normalize_list(value: object) -> list[str]:  # 将任意值规范为字符串列表
+    if isinstance(value, list):  # 如果本来就是列表
+        return [str(item).strip() for item in value if str(item).strip()]  # 转换并过滤空值
+    if isinstance(value, str):  # 如果是字符串
+        parts = [part.strip() for part in value.replace("，", ",").split(",")]  # 按中英文逗号切分
+        return [part for part in parts if part]  # 过滤空项
+    return []  # 其他类型直接返回空列表
+
+#递归地把多层嵌套的枚举字典压平成 JSON 文本
+def build_simple_analysis_enum_text(enums: dict[str, object]) -> str:  # 将简化分析枚举递归展开为提示词文本
+    lines: list[str] = []  # 收集每一层枚举描述
+    for key, value in enums.items():  # 遍历当前层级
+        if isinstance(value, dict):  # 如果是子结构，继续递归展开
+            child_text = build_simple_analysis_enum_text(value)  # 生成子结构文本
+            lines.append(f'"{key}":{{{child_text}}}')  # 拼接当前层级
+        else:  # 如果是枚举集合
+            options = ",".join(f'"{item}"' for item in sorted(value))  # 排序后生成稳定输出
+            lines.append(f'"{key}":[{options}]')  # 拼接枚举数组
+    return ",".join(lines)  # 返回当前层级的JSON片段
