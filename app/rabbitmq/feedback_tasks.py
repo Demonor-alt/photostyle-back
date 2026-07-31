@@ -9,7 +9,7 @@ from typing import Any  # 导入类型注解模块，用于类型提示
 import pika  # 导入RabbitMQ客户端库
 from pika.exceptions import AMQPError  # 导入AMQP错误异常类
 
-from app.db.history_mapper import get_history_record  # 导入历史记录查询函数
+from app.db.history_mapper import get_history_record_by_history_id  # 导入历史记录查询函数
 from app.db.user_mapper import get_user_profile_by_id  # 导入用户信息查询函数
 from app.rag.vector_writing import upsert_photo_style_embedding  # 导入图片风格嵌入更新函数
 from app.utils.runtime import logger  # 导入日志记录器
@@ -70,7 +70,7 @@ def publish_feedback_updated(history_id: int) -> None:  # 定义发布反馈更�
 
 
 def handle_feedback_updated(history_id: int) -> None:  # 定义处理反馈更新事件的函数，接收历史记录ID参数
-    current_history = get_history_record(history_id)  # 获取历史记录信息
+    current_history = get_history_record_by_history_id(history_id)  # 获取历史记录信息
     user_id = int(current_history["user_id"])  # 从历史记录中提取用户ID并转换为整数
     embedding_payload = upsert_photo_style_embedding(history_id, user_id)  # 保存向量到知识库中
     logger.info(" 向量保存成功：feedback.embedding.saved=%s", embedding_payload["metadata"])

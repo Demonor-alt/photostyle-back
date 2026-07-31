@@ -7,11 +7,11 @@ from fastapi.responses import StreamingResponse  # 引入流式响应
 from app.schemas.base import ApiResponse
 from app.schemas.llm import (SuggestRequest)
 from app.schemas.dto.history_dto import (SuggestFormParams,HistoryRecord,FeedbackUpdateRequest)
+from app.schemas.dto.history_user_dto import HistoryUserRecord
 from app.schemas.vo.history_vo import (SuggestApiData, HistoryListResponse, DatabaseStatusResponse)
 from app.schemas.error import (FeedbackError,HistorySaveError)
 from app.services.orchestrator import format_sse_event, run_pipeline  # 引入调度入口和SSE格式化器
-from app.db.history_mapper import (get_database_status,list_history_records,save_history_record,update_history_feedback)
-from app.db.user_mapper import get_user_profile  # 引入用户查询服务
+from app.db.history_mapper import (get_database_status,list_history_records_by_user_id,save_history_record,update_history_feedback)
 from app.rabbitmq.feedback_tasks import publish_feedback_updated  # 引入反馈异步任务发布器
 from app.api.utils import save_upload_file, parse_tag_list  # 引入工具函数
 
@@ -41,24 +41,23 @@ async def suggest(  # 定义支持表单上传的建议接口
     result = run_pipeline(payload)  # 调用调度流程生成建议
     logger.info("suggest.response=%s", result.model_dump_json())
     try:
-        # 获取用户ID
-        user = get_user_profile(payload.username)
         # 准备input_data，移除face_analysis和username，清空extra_tags
         input_data = payload.model_dump()
         input_data.pop("face_analysis", None)
         input_data.pop("username", None)
         input_data["extra_tags"] = []
 
-        history = save_history_record({
-            "user_id": user.id,
-            "input_data": input_data,
-            "output_data": result.model_dump(),
-            "makeup_rating": 0,
-            "outfit_rating": 0,
-            "pose_rating": 0,
-            "feedback_comment": None,
-            "reviewed": False,
-        })
+        history_record = HistoryUserRecord(
+            user_id=form.user_id,
+            input_data=input_data,
+            output_data=result.model_dump(),
+            makeup_rating=0,
+            outfit_rating=0,
+            pose_rating=0,
+            feedback_comment=None,
+            reviewed=False,
+        )
+        history = save_history_record(history_record)
     except Exception as exc:
         logger.exception("suggest.history.save_failed")
         raise HistorySaveError(hint=str(exc)) from exc
@@ -123,13 +122,13 @@ async def database_status() -> ApiResponse[DatabaseStatusResponse]:  # 返回数
 
 @router.post("/history", response_model=ApiResponse[None])  # 定义历史记录保存接口
 async def create_history(record: HistoryRecord) -> ApiResponse[None]:  # 接收历史记录并保存
-    save_history_record(record.model_dump())  # 将记录写入存储
+    save_history_record(record)  # 将记录写入存储
     return ApiResponse[None](message="历史记录保存成功")
 
 
 @router.get("/history", response_model=ApiResponse[HistoryListResponse])  # 定义历史记录查询接口
 async def get_history(user_id: int | None = None) -> ApiResponse[HistoryListResponse]:  # 获取历史记录列表，支持按用户ID筛选
-    items = list_history_records(user_id=user_id)  # 按用户ID筛选历史记录
+    items = list_history_records_by_user_id(user_id=user_id)  # 按用户ID筛选历史记录
     return ApiResponse[HistoryListResponse](
         message="历史记录查询成功",
         data=HistoryListResponse(items=items),
@@ -153,5 +152,4 @@ async def update_history(history_id: int, payload: FeedbackUpdateRequest) -> Api
     except Exception as exc:
         logger.exception("feedback.update.publish_failed history_id=%s, error=%s", history_id, str(exc))
         raise FeedbackError(hint=f"发布反馈更新事件失败: {exc}") from exc
-    
     return ApiResponse[None](message="点评保存成功")

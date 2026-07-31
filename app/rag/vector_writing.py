@@ -8,7 +8,7 @@ from typing import Any  # 类型提示支持
 
 from pymilvus import Collection, CollectionSchema, DataType, FieldSchema, utility  # Milvus 向量数据库客户端
 
-from app.db.history_mapper import get_history_record  # 从数据库获取历史记录
+from app.db.history_mapper import get_history_record_by_history_id  # 从数据库获取历史记录
 from app.db.user_mapper import get_user_profile_by_id  # 从数据库获取用户长相
 from app.rag.embedding import embed_text, get_embedding_dimension, get_embedding_model_name  # 文本向量化功能
 from app.rag.milvus_client import (
@@ -194,7 +194,7 @@ def upsert_photo_style_embedding(history_id: int, user_id: int | None = None) ->
     """为指定历史记录写入或更新向量记忆。"""
     logger.info("开始处理向量写入，history_id=%s user_id=%s", history_id, user_id)
     collection = _ensure_collection()
-    history = get_history_record(history_id)
+    history = get_history_record_by_history_id(history_id)
     resolved_user_id = int(user_id if user_id is not None else history["user_id"])
     logger.debug("解析用户ID完成，resolved_user_id=%s", resolved_user_id)
     user_profile = get_user_profile_by_id(resolved_user_id)

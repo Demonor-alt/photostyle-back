@@ -9,10 +9,10 @@ from app.schemas.base import BaseSchema  # 引入公共Schema基类
 class UploadPhotoFormParams:  # 定义照片上传表单参数（用于FastAPI依赖注入）
     def __init__(
         self,
-        username: Annotated[str, Form(description="用户名")],
+        userId: Annotated[int, Form(description="用户ID")],
         image: Annotated[UploadFile, File(description="上传的图片文件")],
     ):
-        self.username = username
+        self.userId = userId
         self.image = image
 
 
@@ -30,9 +30,20 @@ class LoginRequest(BaseSchema):  # 定义登录请求模型
 
 #/auth/me的put接口表单参数
 class UpdateUserProfileRequest(BaseSchema):  # 定义更新用户资料请求模型
+    user_id: int  # 用户ID
     new_username: Optional[str] = None  # 新用户名
     password: Optional[str] = None  # 新密码
     photo_path: Optional[str] = None  # 图片路径
     photo_mime_type: Optional[str] = None  # 图片类型
     face_analysis: Optional[dict] = None  # 人脸分析结果
     simple_analysis: Optional[dict] = None  # 简化人脸分析结果
+
+
+#/photos/upload保存用户照片参数
+class UpsertUserPhotoRequest(BaseSchema):  # 定义保存或更新用户照片参数
+    user_id: int  # 用户ID
+    photo_path: str  # 图片路径
+    photo_mime_type: Optional[str] = None  # 图片类型
+    face_analysis: Optional[dict] = None  # 人脸分析结果
+    simple_analysis: Optional[dict] = None  # 简化人脸分析结果
+

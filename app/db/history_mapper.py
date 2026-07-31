@@ -2,8 +2,11 @@ import os  # 引入os用于读取环境变量
 from sqlalchemy import text  # 引入text用于执行原生SQL
 from app.db.models.history import PhotoStyleHistory  # 引入历史模型
 from app.db.database import SessionLocal, engine  # 引入数据库会话和引擎
+from app.schemas.dto.history_dto import HistoryRecord
+from app.schemas.dto.history_user_dto import HistoryUserRecord
 from app.schemas.orm.history import History
 
+HistorySaveRecord = HistoryRecord | HistoryUserRecord
 
 def get_database_status() -> dict:
     """获取数据库连接状态"""
@@ -28,26 +31,19 @@ def get_database_status() -> dict:
         raise ConnectionError(f"数据库连接失败：{str(e)}")
 
 
-def _ensure_review_payload(record: dict) -> dict:
-    return {
-        "makeup_rating": int(record.get("makeup_rating", 0) or 0),
-        "outfit_rating": int(record.get("outfit_rating", 0) or 0),
-        "pose_rating": int(record.get("pose_rating", 0) or 0),
-        "feedback_comment": record.get("feedback_comment") or None,
-        "reviewed": bool(record.get("reviewed", False)),
-    }
-
-
-def save_history_record(record: dict) -> History:
+def save_history_record(record: HistorySaveRecord) -> History:
     """保存历史记录并返回新增记录"""
     db = SessionLocal()
     try:
-        review_payload = _ensure_review_payload(record)
         history = PhotoStyleHistory(
-            user_id=record["user_id"],
-            input_data=record["input_data"],
-            output_data=record["output_data"],
-            **review_payload,
+            user_id=record.user_id,
+            input_data=record.input_data,
+            output_data=record.output_data,
+            makeup_rating=record.makeup_rating,
+            outfit_rating=record.outfit_rating,
+            pose_rating=record.pose_rating,
+            feedback_comment=record.feedback_comment,
+            reviewed=record.reviewed,
         )
         db.add(history)
         db.commit()
@@ -77,7 +73,7 @@ def update_history_feedback(history_id: int, makeup_rating: int, outfit_rating: 
         db.close()  # 关闭数据库会话
 
 
-def get_history_record(history_id: int) -> History:
+def get_history_record_by_history_id(history_id: int) -> History:
     """根据ID获取历史记录"""
     db = SessionLocal()  # 创建数据库会话
     try:  # 开始查询
@@ -89,7 +85,7 @@ def get_history_record(history_id: int) -> History:
         db.close()  # 关闭数据库会话
 
 
-def list_history_records(user_id: int | None = None) -> list[History]:
+def list_history_records_by_user_id(user_id: int | None = None) -> list[History]:
     """查询历史记录，支持按用户ID筛选"""
     db = SessionLocal()
     try:

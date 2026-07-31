@@ -15,13 +15,13 @@ from app.schemas.error import (
     UploadUnknownError,
 )
 
-from app.schemas.dto.user_dto import (UploadPhotoFormParams,RegisterRequest,LoginRequest,UpdateUserProfileRequest)
+from app.schemas.dto.user_dto import (UploadPhotoFormParams,RegisterRequest,LoginRequest,UpsertUserPhotoRequest,UpdateUserProfileRequest)
 from app.schemas.vo.user_vo import (UploadPhotoData,UserResponse)
 from app.db.user_mapper import (
     ensure_user,
     get_user_profile_by_id,
     login_user,
-    upsert_user_photo,
+    upsert_user_photo_by_id,
     update_user_profile_by_id,
 )
 from app.services.llm.qwen_face_client import analyze_image  # 引入Qwen图片分析服务
@@ -37,12 +37,24 @@ async def upload_photo(
     image = form.image
     if not image.content_type or not image.content_type.startswith("image/"):
         raise UploadError("只支持图片文件上传")
+    try:
+        get_user_profile_by_id(form.userId)
+    except ValueError as exc:
+        raise UploadError(str(exc)) from exc
     image_path, image_mime_type = save_upload_file(image)
     try:
         face_analysis = analyze_image(image_path=image_path, image_mime_type=image_mime_type)
         simple_analysis = face_analysis.get("simple_analysis") if isinstance(face_analysis, dict) else None
         # 只有检测到人脸时才把照片写入数据库，避免无效照片污染用户资料
-        user = upsert_user_photo(form.username, image_path, image_mime_type, face_analysis, simple_analysis)
+        user = upsert_user_photo_by_id(
+            UpsertUserPhotoRequest(
+                user_id=form.userId,
+                photo_path=image_path,
+                photo_mime_type=image_mime_type,
+                face_analysis=face_analysis,
+                simple_analysis=simple_analysis,
+            )
+        )
     except ValueError as exc:
         if image_path:
             try:
@@ -105,15 +117,8 @@ async def me(userId: int) -> ApiResponse[UserResponse]:  # 通过用户ID获取�
 
 
 @router.put("/auth/me", response_model=ApiResponse[UserResponse])  # 定义资料修改接口
-async def update_me(userId: int, payload: UpdateUserProfileRequest) -> ApiResponse[UserResponse]:  # 修改当前用户资料
-    user = update_user_profile_by_id(
-        userId,
-        new_username=payload.new_username,
-        password=payload.password,
-        photo_path=payload.photo_path,
-        photo_mime_type=payload.photo_mime_type,
-        face_analysis=payload.face_analysis,
-    )
+async def update_me(payload: UpdateUserProfileRequest) -> ApiResponse[UserResponse]:  # 修改当前用户资料
+    user = update_user_profile_by_id(payload)
     return ApiResponse[UserResponse](message="用户资料更新成功", data=UserResponse.model_validate(user))
 
 

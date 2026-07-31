@@ -8,6 +8,7 @@ class SuggestFormParams:  # 定义建议生成表单参数（用于FastAPI依赖
     def __init__(
         self,
         username: Annotated[str, Form(description="用户名")],
+        user_id: Annotated[int, Form(description="用户ID")],
         style: Annotated[str, Form(description="风格")],
         location: Annotated[str | None, Form(description="地点")] = None,
         time: Annotated[str | None, Form(description="时间")] = None,
@@ -19,6 +20,7 @@ class SuggestFormParams:  # 定义建议生成表单参数（用于FastAPI依赖
         image: Annotated[UploadFile | None, File(description="上传图片文件")] = None,
     ):
         self.username = username
+        self.user_id = user_id
         self.style = style
         self.location = location
         self.time = time

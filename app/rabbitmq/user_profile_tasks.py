@@ -10,7 +10,7 @@ from pika.exceptions import AMQPError
 from sqlalchemy.exc import IntegrityError
 
 from app.db.database import SessionLocal, init_db
-from app.db.history_mapper import get_history_record
+from app.db.history_mapper import get_history_record_by_history_id
 from app.db.models.processed_event import ProcessedEvent
 from app.services.llm.qwen_user_profile_analysis_client import analyze_user_preference
 from app.services.user_profile_update_service import update_user_profile
@@ -83,7 +83,7 @@ def _build_context(payload: dict[str, Any]) -> dict[str, Any]:
     history = None
     history_id = payload.get("history_id")
     if history_id is not None:
-        history = get_history_record(int(history_id))
+        history = get_history_record_by_history_id(int(history_id))
 
     source = history or payload
     user_id = int(payload.get("user_id") or source["user_id"])
