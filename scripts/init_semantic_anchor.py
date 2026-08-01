@@ -21,6 +21,7 @@ from dashscope import Generation  # 用于发起文本生成请求。
 from dotenv import load_dotenv  # 用于脚本独立运行时加载 back/.env。
 from langchain_core.output_parsers import PydanticOutputParser  # 用于清洗 LLM 输出并解析为 Pydantic 模型。
 from pydantic import BaseModel, Field, RootModel  # 用于定义 LLM 输出结构并做字段映射。
+from app.config.constants import QWEN_SEMANTIC_ANCHOR_MODEL # 引入语义锚点生成模型名称
 
 # 允许从任意目录直接运行脚本时，也能导入 app 包并读取 back/.env。
 BACKEND_ROOT = Path(__file__).resolve().parents[1]  # 定位后端根目录，便于拼接配置与输出文件路径。
@@ -34,7 +35,7 @@ REQUIRED_EXPRESSION_TYPES = ["用户喜欢表达", "用户拒绝表达", "口语
 
 logger = logging.getLogger("init_semantic_anchor")  # 创建脚本专用日志器。
 dashscope.base_http_api_url = os.getenv("DASHSCOPE_API_URL") # 指定 DashScope API 地址。
-QWEN_SEMANTIC_ANCHOR_MODEL = os.getenv("QWEN_SEMANTIC_ANCHOR_MODEL")
+
 
 
 class GeneratedAnchor(BaseModel):

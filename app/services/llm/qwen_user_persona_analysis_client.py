@@ -12,11 +12,10 @@ from langchain_core.output_parsers import PydanticOutputParser  # 引入 Pydanti
 from app.services.llm.qwen_client import get_api_key, get_qwen_response_content  # 引入统一的 Qwen 鉴权和响应文本提取方法。
 from app.utils.runtime import logger  # 引入统一日志器。
 from app.schemas.llm import PreferenceAnalysisOutput,UserPersonaAnalysisRequest # 引入用户偏好分析输出结构。
-
+from app.config.constants import QWEN_BASE_MODEL # 引入基础模型名称
 
 # 配置 DashScope 百炼 API 地址，保持和现有 Qwen 服务一致。  # 让 SDK 指向正确的服务地址。
 dashscope.base_http_api_url = os.getenv("DASHSCOPE_API_URL")  # 设置 DashScope 基础 API 地址。
-QWEN_MODEL = os.getenv("QWEN_BASE_MODEL")  # 读取偏好分析模型名称。
 
 
 _PREFERENCE_ANALYSIS_PARSER = PydanticOutputParser(pydantic_object=PreferenceAnalysisOutput)  # 定义偏好分析结果解析器
@@ -61,7 +60,7 @@ def analyze_user_preference(  # 对单个用户评论进行偏好分析。
     logger.info("preference.analysis.request comment=%s anchors=%s",payload.comment,payload.anchors)  # 日志记录结束。
     response = Generation.call(  # 调用 Qwen 生成接口。
         api_key=get_api_key(),  # 传入 API Key。
-        model=QWEN_MODEL,  # 选择模型。
+        model=QWEN_BASE_MODEL,  # 选择模型。
         messages=messages,  # 传入消息列表。
         result_format="message",  # 结果格式为 message。
         enable_thinking=True,  # 开启思考能力。

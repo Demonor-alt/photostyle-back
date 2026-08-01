@@ -9,9 +9,9 @@ from langchain_core.exceptions import OutputParserException
 
 from app.schemas.llm import SuggestRequest, SuggestResponse  # 引入请求响应模型
 from app.services.llm.qwen_client import get_api_key, get_qwen_response_message
+from app.config.constants import QWEN_BASE_MODEL # 引入基础模型名称
 
 dashscope.base_http_api_url = os.getenv("DASHSCOPE_API_URL")  # 配置百炼API地址
-QWEN_MODEL = os.getenv("QWEN_BASE_MODEL")
 suggest_response_parser = PydanticOutputParser(pydantic_object=SuggestResponse)
 
 
@@ -50,7 +50,7 @@ def generate_suggestion(payload: SuggestRequest, user_face_analysis: dict | None
     logger.info("qwen_suggest_client request=%s", json.dumps({"payload": payload.model_dump(), "face_analysis": face_analysis, "messages": messages}, ensure_ascii=False, default=str))
     response = Generation.call(
         api_key=get_api_key(),
-        model=QWEN_MODEL,
+        model=QWEN_BASE_MODEL,
         messages=messages,
         result_format="message",
         enable_thinking=True,

@@ -10,9 +10,10 @@ from app.services.llm.qwen_client import get_api_key, get_qwen_response_content,
 from app.utils.runtime import logger  # 引入统一日志器
 from app.schemas.llm import FaceAnalysisRequest, FaceAnalysisRespionse  # 引入人脸分析输出模型
 from app.config.enums.face_analysis import SIMPLE_ANALYSIS_ENUMS  # 引入人脸分析枚举
+from app.config.constants import QWEN_FACE_MODEL # 引入人脸分析模型名称
 
 dashscope.base_http_api_url = os.getenv("DASHSCOPE_API_URL")  # 设置DashScope基础API地址
-QWEN_FACE_MODEL = os.getenv("QWEN_FACE_MODEL")  # 读取人脸分析模型名称
+
 
 _FACE_ANALYSIS_PARSER = PydanticOutputParser(pydantic_object=FaceAnalysisRequest)
 
