@@ -58,3 +58,22 @@ class FaceAnalysisRespionse(BaseModel):  # 定义人脸分析响应结构
     simple_analysis: dict[str, Any] = Field(default_factory=dict)  # 简化分析
     raw: str = Field(default="")  # 原始模型输出
 
+# qwen_user_persona_analysis_client.py请求
+class UserPersonaAnalysisRequest(BaseModel):  # 定义用户人格画像分析请求结构
+    input_data: dict[str, Any] = Field(default_factory=dict)  # 输入数据
+    output_data: dict[str, Any] = Field(default_factory=dict)  # 输出数据
+    comment: str = Field(default="")  # 用户评论
+    makeup_rating: int = Field(default=0)  # 妆容评分
+    outfit_rating: int = Field(default=0)  # 穿搭评分
+    pose_rating: int = Field(default=0)  # 姿势评分
+    old_semantic_axes: Any | None = None  # 旧历史画像
+    anchors: list[dict[str, Any]] | None = None  # 召回锚点
+
+
+# qwen_user_profile_analysis_client.py响应
+class PreferenceAxisUpdateOutput(BaseModel):  # 单条语义轴更新的输出结构
+    axis_name: str = Field(default="")  # 语义轴名称
+    value: float = Field(default=0.0)  # 大模型判断置信度
+    reason: str = Field(default="")  # 判断原因
+class PreferenceAnalysisOutput(BaseModel):  # 用户偏好分析的整体输出结构
+    axis_updates: list[PreferenceAxisUpdateOutput] = Field(default_factory=list)  # 语义轴更新列表

@@ -24,7 +24,7 @@ def get_or_create_user_persona(db, user_id: int) -> UserPersonaModel:
 
 
 def get_user_persona_by_id(user_id: int) -> UserPersona | None:
-    """根据用户 ID 获取用户人格画像。"""
+    """根据用户 ID 获取用户画像。"""
     db = SessionLocal()
     try:
         persona = db.query(UserPersonaModel).filter(UserPersonaModel.user_id == int(user_id)).first()
