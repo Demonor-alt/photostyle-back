@@ -13,20 +13,14 @@ from app.services.llm.qwen_client import get_api_key, get_qwen_response_content 
 from app.utils.runtime import logger  # 引入统一日志器。
 from app.schemas.llm import PreferenceAnalysisOutput,UserPersonaAnalysisRequest # 引入用户偏好分析输出结构。
 from app.config.constants import QWEN_BASE_MODEL # 引入基础模型名称
+from app.utils.semantic_anchors import clamp # 引入语义轴取值标准化方法
+from app.config.constants import AXIS_VALUE_MIN, AXIS_VALUE_MAX,AXIS_VALUE_DEFAULT # 引入语义轴取值最小值和最大值
 
 # 配置 DashScope 百炼 API 地址，保持和现有 Qwen 服务一致。  # 让 SDK 指向正确的服务地址。
 dashscope.base_http_api_url = os.getenv("DASHSCOPE_API_URL")  # 设置 DashScope 基础 API 地址。
 
 
 _PREFERENCE_ANALYSIS_PARSER = PydanticOutputParser(pydantic_object=PreferenceAnalysisOutput)  # 定义偏好分析结果解析器
-
-
-def _clamp(value: Any, min_value: float, max_value: float, default: float = 0.0) -> float:
-    try:
-        number = float(value)
-    except (TypeError, ValueError):
-        number = default
-    return round(max(min_value, min(number, max_value)), 4)
 
 
 def analyze_user_preference(  # 对单个用户评论进行偏好分析。
@@ -44,7 +38,7 @@ def analyze_user_preference(  # 对单个用户评论进行偏好分析。
         请严格只输出 JSON，不要输出解释、Markdown 或代码块。"""
         f"请遵循以下格式要求：{_PREFERENCE_ANALYSIS_PARSER.get_format_instructions()}"  # LangChain解析器格式要求。
         "JSON 字段必须包含 axis_updates"  # 要求字段完整。
-        "其中 value 表示你对用户偏好变化的判断，范围 -1 到 1，如果用户偏好没涉及当前语义轴，则value为0，负数表示降低/拒绝，正数表示增强/喜欢，要有依据，不要自行融合 Milvus similarity。reason 表示判断原因，简短说明。"  # 置信度说明。
+        f"其中 value 表示你对用户偏好的判断，范围 {AXIS_VALUE_MIN} 到 {AXIS_VALUE_MAX}，如果用户偏好没涉及当前语义轴，则value为{AXIS_VALUE_DEFAULT}，负数表示用户与语义轴的描述相反，正数表示用户与语义轴的描述一致，要有依据，不要自行融合 Milvus similarity。reason 表示判断原因，简短说明。"  # 置信度说明。
         },
         {"role": "user", "content": json.dumps({
             "input_data": payload.input_data,
@@ -81,7 +75,7 @@ def analyze_user_preference(  # 对单个用户评论进行偏好分析。
             item.model_copy(  # 保持 PreferenceAxisUpdateOutput 类型。
                 update={  # 单条标准化记录。
                     "axis_name": axis_name,  # 标准化轴名。
-                    "value": _clamp(item.value, -1.0, 1.0),  # 标准化值域。
+                    "value": clamp(item.value),  # 标准化值域。
                     "reason": str(item.reason).strip(),  # 标准化原因文本。
                 }  # 单条记录结束。
             )  # 复制结束。

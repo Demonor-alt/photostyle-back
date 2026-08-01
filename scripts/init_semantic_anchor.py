@@ -22,6 +22,8 @@ from dotenv import load_dotenv  # 用于脚本独立运行时加载 back/.env。
 from langchain_core.output_parsers import PydanticOutputParser  # 用于清洗 LLM 输出并解析为 Pydantic 模型。
 from pydantic import BaseModel, Field, RootModel  # 用于定义 LLM 输出结构并做字段映射。
 from app.config.constants import QWEN_SEMANTIC_ANCHOR_MODEL # 引入语义锚点生成模型名称
+from app.utils.semantic_anchors import clamp # 引入语义轴取值标准化方法
+from app.config.constants import AXIS_VALUE_MIN, AXIS_VALUE_MAX,AXIS_VALUE_DEFAULT # 引入语义轴取值最小值和最大值
 
 # 允许从任意目录直接运行脚本时，也能导入 app 包并读取 back/.env。
 BACKEND_ROOT = Path(__file__).resolve().parents[1]  # 定位后端根目录，便于拼接配置与输出文件路径。
@@ -43,7 +45,7 @@ class GeneratedAnchor(BaseModel):
 
     text: str = Field(description="用户表达文本")  # 用户自然语言表达内容。
     axis_name: str = Field(description="语义轴名称")  # 当前锚点所属语义轴。
-    value: float = Field(description="-1 到 1 之间的语义轴取值")  # LLM 输出的原始轴值。
+    value: float = Field(description=f"{AXIS_VALUE_MIN} 到 {AXIS_VALUE_MAX} 之间的语义轴取值")  # LLM 输出的原始轴值。
     category: str = Field(description="表达类型分类")  # 表达所属类型。
 
 
@@ -104,7 +106,7 @@ def generate_axis_anchors(axis: dict[str, str]) -> list[dict[str, Any]]:
         "requirements": {  # 说明生成要求。
             "count": DEFAULT_SAMPLES_PER_AXIS,  # 每个轴的数量。
             "expression_types": REQUIRED_EXPRESSION_TYPES,  # 约束可用的表达类型。
-            "value_range": "-1 到 1，负数表示拒绝/降低该语义轴，正数表示喜欢/增强该语义轴，0 表示中性或不明显。",  # 约束数值语义。
+            "value_range": f"{AXIS_VALUE_MIN} 到 {AXIS_VALUE_MAX}，负数表示拒绝/降低该语义轴，正数表示喜欢/增强该语义轴，{AXIS_VALUE_DEFAULT}表示中性或不明显。",  # 约束数值语义。
             "output": "只输出 JSON 数组，不要 Markdown，不要解释。每项字段必须包含 text、axis_name、value、category。",  # 强制模型输出格式。
             "category_hint": "category 必须从 expression_types 中选择。",  # 提供类别和方向提示。
             "format_instructions": ANCHOR_OUTPUT_PARSER.get_format_instructions(),  # 注入 LangChain 解析器生成的 Pydantic 格式说明。
@@ -148,19 +150,6 @@ def _parse_generated_anchors(raw_text: str) -> list[dict[str, Any]]:
     return [anchor.model_dump() for anchor in parsed.root]  # 将 Pydantic 模型转换为后续规范化流程使用的字典。
 
 
-def _normalize_axis_value(value: Any) -> float:
-    """将 LLM 生成的 value 规范到 -1 到 1。"""  # 将模型数值限制在合法区间内。
-    try:  # 尝试把输入转换成浮点数。
-        number = float(value)  # 将值转换为浮点数。
-    except Exception:  # 如果转换失败则使用默认值。
-        return 0.0  # 转换失败时返回中性值。
-    if number < -1:  # 判断是否小于最小值。
-        return -1.0  # 小于最小值时截断到 -1。
-    if number > 1:  # 判断是否大于最大值。
-        return 1.0  # 大于最大值时截断到 1。
-    return round(number, 3)  # 保留三位小数并返回。
-
-
 def _normalize_anchor(anchor: dict[str, Any], axis_name: str, fallback_category: str) -> dict[str, Any] | None:
     """规范单条语义锚点，过滤结构异常的数据。"""  # 清洗单条锚点并统一字段格式。
     text = str(anchor.get("text", "")).strip()  # 读取锚点文本并去空白。
@@ -175,7 +164,7 @@ def _normalize_anchor(anchor: dict[str, Any], axis_name: str, fallback_category:
     return {  # 返回标准化后的锚点对象。
         "text": text,  # 保存文本内容。
         "axis_name": generated_axis_name,  # 保存轴名称。
-        "axis_value": _normalize_axis_value(anchor.get("value", anchor.get("axis_value", 0))),  # 保存标准化后的轴值。
+        "axis_value": clamp(anchor.get("value", anchor.get("axis_value", 0))),  # 保存标准化后的轴值。
         "category": category,  # 保存类别。
     }  # 字典结束。
 

@@ -6,42 +6,18 @@ from functools import lru_cache  # 为配置读取增加缓存。
 from pathlib import Path  # 处理文件路径。
 from typing import Any  # 提供通用类型标注。
 
+import poyo  # 解析 YAML 配置。
 from pymilvus import Collection, CollectionSchema, DataType, FieldSchema, utility  # 引入 Milvus 相关核心能力。
 
 from app.rag.embedding import embed_text, get_embedding_dimension, get_embedding_model_name  # 引入向量化与模型信息工具。
-from app.rag.milvus_client import connect_milvus, get_vector_field_name  # 复用通用 Milvus 连接与字段配置。
+from app.rag.milvus_client import connect_milvus  # 复用通用 Milvus 连接与字段配置。
 from app.utils.runtime import logger  # 引入运行时日志对象。
 
-# Semantic Anchor Library 是全局语义知识库，不保存用户私有画像数据。  # 说明该集合的业务边界。
+# Semantic Anchor Library 是全局语义知识库，不保存用户私有画像数据。
 _COLLECTION_NAME = os.getenv("SEMANTIC_AXIS_COLLECTION_NAME")  # 语义轴集合名称
 _VECTOR_FIELD = "embedding" # 向量字段名。
 _CONFIG_PATH = Path(__file__).resolve().parents[2] / "scripts" / "semantic_axes.yaml"  # 语义轴配置文件路径。
 _DEFAULT_SEARCH_PARAMS = {"metric_type": "COSINE", "params": {"ef": 64}}  # 默认相似度搜索参数。
-
-
-def _parse_simple_axes_yaml(config_text: str) -> list[dict[str, str]]:  # 解析简化 YAML 的内部函数。
-    """解析当前项目使用的轻量 YAML 结构，避免新增运行时依赖。"""  # 函数文档：解析轻量 YAML。
-    axes: list[dict[str, str]] = []  # 保存解析后的语义轴列表。
-    current: dict[str, str] | None = None  # 保存当前正在构建的语义轴对象。
-    for raw_line in config_text.splitlines():  # 逐行读取配置内容。
-        line = raw_line.strip()  # 去除行首尾空白。
-        if not line or line.startswith("#") or line == "semantic_axes:":  # 跳过空行、注释行与根节点标签。
-            continue  # 继续处理下一行。
-        if line.startswith("- "):  # 识别新的列表项开始。
-            if current:  # 如果已有一个正在构建的条目。
-                axes.append(current)  # 将其加入结果列表。
-            current = {}  # 创建新的条目容器。
-            line = line[2:].strip()  # 去掉列表项前缀。
-            if line and ":" in line:  # 如果同一行上还有键值对。
-                key, value = line.split(":", 1)  # 拆分键和值。
-                current[key.strip()] = value.strip().strip('"').strip("'")  # 去除引号并保存。
-            continue  # 处理下一行。
-        if current is not None and ":" in line:  # 如果当前条目存在且当前行为键值对。
-            key, value = line.split(":", 1)  # 拆分键和值。
-            current[key.strip()] = value.strip().strip('"').strip("'")  # 去除引号并保存。
-    if current:  # 如果最后一个条目存在。
-        axes.append(current)  # 加入结果列表。
-    return axes  # 返回解析结果。
 
 
 @lru_cache(maxsize=1)  # 缓存语义轴配置，避免重复读取文件。
@@ -49,7 +25,10 @@ def load_semantic_axes_config() -> dict[str, dict[str, str]]:  # 加载语义轴
     """读取语义轴配置，服务逻辑只依赖配置中的 axis name。"""  # 函数文档：读取语义轴配置。
     if not _CONFIG_PATH.exists():  # 如果配置文件不存在。
         raise FileNotFoundError(f"语义轴配置文件不存在: {_CONFIG_PATH}")  # 抛出文件不存在异常。
-    axes = _parse_simple_axes_yaml(_CONFIG_PATH.read_text(encoding="utf-8"))  # 读取并解析配置文本。
+    parsed = poyo.parse_string(_CONFIG_PATH.read_text(encoding="utf-8"))  # 读取并解析 YAML 配置文本。
+    axes = parsed.get("semantic_axes", []) if isinstance(parsed, dict) else []  # 提取语义轴列表。
+    if not isinstance(axes, list):  # 如果语义轴配置不是列表。
+        raise ValueError(f"语义轴配置 semantic_axes 必须是列表: {_CONFIG_PATH}")  # 抛出配置格式错误异常。
     config: dict[str, dict[str, str]] = {}  # 构建以 axis_name 为键的配置字典。
     for item in axes:  # 遍历解析出的每个条目。
         axis_name = str(item.get("axis_name", "")).strip()  # 提取并清理 axis_name。
