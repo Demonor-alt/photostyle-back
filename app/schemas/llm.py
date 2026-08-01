@@ -70,7 +70,7 @@ class UserPersonaAnalysisRequest(BaseModel):  # 定义用户人格画像分析�
     anchors: list[dict[str, Any]] | None = None  # 召回锚点
 
 
-# qwen_user_profile_analysis_client.py响应
+# qwen_user_persona_analysis_client.py响应
 class PreferenceAxisUpdateOutput(BaseModel):  # 单条语义轴更新的输出结构
     axis_name: str = Field(default="")  # 语义轴名称
     value: float = Field(default=0.0)  # 大模型判断置信度
