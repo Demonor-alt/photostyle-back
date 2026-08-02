@@ -28,7 +28,20 @@ def declare_review_submitted_exchange(channel: Any) -> None:  # 定义声明点�
 
 def declare_review_submitted_queue(channel: Any, queue_name: str) -> None:  # 定义声明并绑定点评提交队列的公共函数。
     declare_review_submitted_exchange(channel)  # 确保点评提交交换机已经存在。
-    channel.queue_declare(queue=queue_name, durable=True)  # 声明持久化队列，确保消费者离线期间消息不丢失。
+    dead_letter_exchange = f"{queue_name}.dlx"  # 为当前业务队列创建独立死信交换机，避免不同消费者失败消息混在一起。
+    dead_letter_queue = f"{queue_name}.dlq"  # 为当前业务队列创建独立死信队列。
+    dead_letter_routing_key = f"{queue_name}.dead"  # 使用稳定路由键将死信消息投递到对应 DLQ。
+    channel.exchange_declare(exchange=dead_letter_exchange, exchange_type="direct", durable=True)  # 声明持久化死信交换机。
+    channel.queue_declare(queue=dead_letter_queue, durable=True)  # 声明持久化死信队列，保存处理失败且不重新入队的消息。
+    channel.queue_bind(exchange=dead_letter_exchange, queue=dead_letter_queue, routing_key=dead_letter_routing_key)  # 将死信队列绑定到死信交换机。
+    channel.queue_declare(
+        queue=queue_name,
+        durable=True,
+        arguments={
+            "x-dead-letter-exchange": dead_letter_exchange,
+            "x-dead-letter-routing-key": dead_letter_routing_key,
+        },
+    )  # 声明持久化业务队列，并配置失败消息进入对应 DLQ。
     channel.queue_bind(exchange=_REVIEW_SUBMITTED_EXCHANGE, queue=queue_name, routing_key=_REVIEW_SUBMITTED_ROUTING_KEY)  # 将队列绑定到交换机，接收 ReviewSubmitted 广播事件。
 
 
