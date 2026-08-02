@@ -1,4 +1,7 @@
 """用户人格画像模型定义"""
+from typing import Any
+
+
 from datetime import datetime
 
 from sqlalchemy import BigInteger, Column, DateTime, ForeignKey, JSON
@@ -43,8 +46,6 @@ class UserPersona(Base):
         comment="关联用户ID",
     )
     semantic_axes = Column(JSON, nullable=False, default=default_semantic_axes, comment="用户语义偏好轴")
-    success_patterns = Column(JSON, nullable=False, default=list, comment="用户正向反馈模式")
-    avoid_patterns = Column(JSON, nullable=False, default=list, comment="用户负向反馈规避模式")
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, comment="创建时间")
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间")
 
@@ -56,8 +57,6 @@ class UserPersona(Base):
             "id": self.id,
             "user_id": self.user_id,
             "semantic_axes": self.semantic_axes,
-            "success_patterns": self.success_patterns,
-            "avoid_patterns": self.avoid_patterns,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }

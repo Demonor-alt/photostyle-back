@@ -15,8 +15,6 @@ def get_or_create_user_persona(db, user_id: int) -> UserPersonaModel:
     persona = UserPersonaModel(
         user_id=user_id,
         semantic_axes=default_semantic_axes(),
-        success_patterns=[],
-        avoid_patterns=[],
     )
     db.add(persona)
     db.flush()
@@ -39,16 +37,12 @@ def update_user_persona_by_id(
     *,
     user_id: int,
     semantic_axes: dict[str, Any],
-    success_patterns: list[str],
-    avoid_patterns: list[str],
 ) -> UserPersona:
     """根据用户 ID 更新或创建用户人格画像。"""
     db = SessionLocal()
     try:
         persona = get_or_create_user_persona(db, int(user_id))
         persona.semantic_axes = semantic_axes
-        persona.success_patterns = success_patterns
-        persona.avoid_patterns = avoid_patterns
         db.commit()
         db.refresh(persona)
         return UserPersona.model_validate(persona)

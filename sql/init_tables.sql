@@ -38,8 +38,6 @@ CREATE TABLE IF NOT EXISTS `user_persona` (
     `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '用户人格画像ID',
     `user_id` BIGINT NOT NULL COMMENT '关联用户ID',
     `semantic_axes` JSON NOT NULL COMMENT '用户语义偏好轴',
-    `success_patterns` JSON NOT NULL COMMENT '用户正向反馈模式',
-    `avoid_patterns` JSON NOT NULL COMMENT '用户负向反馈规避模式',
     `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (`id`),

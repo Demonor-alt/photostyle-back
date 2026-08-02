@@ -134,8 +134,8 @@ def _merge_semantic_axes(  # 融合旧画像、LLM 输出和 Milvus 候选值。
         semantic_axes[axis_name] = round(clamp(merged_value, AXIS_VALUE_MIN, 1.0), 4)  # 限制最终轴值范围并保存。
     return semantic_axes  # 返回最终 semantic_axes 入库字典。
 
-
-def user_preference( history_id: int
+# 用户画像semantic_axes部分
+def user_persona_semantic_axes( history_id: int
 ) -> dict[str, Any]:  # 返回结构化分析结果。
     current_history = get_history_record_by_history_id(history_id)  # 获取历史记录信息
     comment = current_history.get("feedback_comment") # 获取历史记录评论
@@ -170,14 +170,10 @@ def user_preference( history_id: int
     updated_persona = update_user_persona_by_id(  # 更新或创建用户画像数据库记录。
         user_id=user_id,  # 指定要更新的用户 ID。
         semantic_axes=semantic_axes,  # 写入轴名和值组成的最新语义轴画像。
-        success_patterns=normalized["success_patterns"],  # 写入 LLM 识别出的成功模式。
-        avoid_patterns=normalized["avoid_patterns"],  # 写入 LLM 识别出的避雷模式。
     )  # 获取更新后的用户画像。
     result = {  # 组装最终结果。
         "user_id": user_id,  # 用户 ID。
         "semantic_axes": semantic_axes,  # 直接返回轴名和值组成的语义轴画像。
-        "avoid_patterns": updated_persona.avoid_patterns,  # 返回已入库的避雷模式列表。
-        "success_patterns": updated_persona.success_patterns,  # 返回已入库的成功模式列表。
         "semantic_anchors": anchors,  # 召回锚点列表。
         "semantic_anchor_axis_candidates": anchor_axis_candidates,
     }  # 结果对象结束。

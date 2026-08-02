@@ -8,7 +8,5 @@ class UserPersona(BaseSchema):
     id: int
     user_id: int
     semantic_axes: dict[str, Any]
-    success_patterns: list[Any]
-    avoid_patterns: list[Any]
     created_at: datetime | None = None
     updated_at: datetime | None = None
