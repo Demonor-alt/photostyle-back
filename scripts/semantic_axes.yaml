@@ -58,6 +58,7 @@ semantic_axes:
       中性 value -0.2~0.2：光线清楚、正常曝光、不过亮不过暗。
       高方向 value 0.5~1：强烈光影、硬光、高对比、阳光直射、闪光灯、明暗反差、轮廓光、舞台光、电影感硬阴影。
   - axis_name: fashion_level
+    effect_field: all
     label: 风格时尚度
     description: >-
       日常生活感 ←→ 高时尚大片感。该轴描述造型整体的潮流程度、设计感和杂志/秀场属性。
@@ -65,6 +66,7 @@ semantic_axes:
       中性 value -0.2~0.2：有搭配感但仍适合日常、轻时髦、普通人可穿。
       高方向 value 0.5~1：高级时装、杂志大片、秀场感、设计师款、造型感强、潮流、先锋、 editorial、大片氛围。
   - axis_name: maturity
+    effect_field: all
     label: 风格成熟度
     description: >-
       少女年轻 ←→ 成熟稳重。该轴描述气质年龄感和社会角色感，不直接等同于妆容浓淡。
@@ -72,6 +74,7 @@ semantic_axes:
       中性 value -0.2~0.2：年龄感不明显、自然年轻、轻熟但不强。
       高方向 value 0.5~1：成熟、御姐、职场感、大女人、稳重、知性、姐姐感、气场强、优雅成熟。
   - axis_name: femininity
+    effect_field: all
     label: 风格女性化程度
     description: >-
       中性/利落 ←→ 女性化/柔美。该轴描述造型、线条和气质的性别风格倾向。
@@ -79,6 +82,7 @@ semantic_axes:
       中性 value -0.2~0.2：不过分强调性别气质、干净自然、可甜可酷。
       高方向 value 0.5~1：女性化、优雅、柔美、裙装、曲线感、温婉、精致女人味、浪漫柔和。
   - axis_name: sweetness
+    effect_field: all
     label: 风格甜美度
     description: >-
       冷酷疏离 ←→ 甜美可爱。该轴描述亲和、可爱、元气和糖分感。
@@ -86,6 +90,7 @@ semantic_axes:
       中性 value -0.2~0.2：自然亲切、不冷也不过甜、干净舒服。
       高方向 value 0.5~1：甜美、可爱、元气、甜妹、笑容灿烂、软萌、亲和、粉色氛围、少女甜感。
   - axis_name: retro
+    effect_field: all
     label: 风格复古度
     description: >-
       现代极简 ←→ 复古怀旧。该轴描述年代感、胶片感、经典复古元素和怀旧氛围。
@@ -93,6 +98,7 @@ semantic_axes:
       中性 value -0.2~0.2：不过分现代也不过分复古、经典耐看。
       高方向 value 0.5~1：港风、法式复古、胶片感、老钱风、民国感、90年代、复古卷发、棕调、怀旧街景、经典画报。
   - axis_name: oriental
+    effect_field: all
     label: 风格东方感
     description: >-
       国际现代 ←→ 东方美学。该轴描述中式、东方、传统文化元素的强弱，不等同于复古。
