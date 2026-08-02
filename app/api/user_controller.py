@@ -44,14 +44,15 @@ async def upload_photo(
     image_path, image_mime_type = save_upload_file(image)
     try:
         face_analysis = analyze_image(image_path=image_path, image_mime_type=image_mime_type)
-        simple_analysis = face_analysis.get("simple_analysis") if isinstance(face_analysis, dict) else None
+        face_analysis_data = face_analysis.model_dump() if hasattr(face_analysis, "model_dump") else face_analysis
+        simple_analysis = face_analysis_data.get("simple_analysis") if isinstance(face_analysis_data, dict) else None
         # 只有检测到人脸时才把照片写入数据库，避免无效照片污染用户资料
         user = upsert_user_photo_by_id(
             UpsertUserPhotoRequest(
                 user_id=form.userId,
                 photo_path=image_path,
                 photo_mime_type=image_mime_type,
-                face_analysis=face_analysis,
+                face_analysis=face_analysis_data,
                 simple_analysis=simple_analysis,
             )
         )
@@ -79,7 +80,7 @@ async def upload_photo(
             username=user.username,
             photo_path=user.photo_path,
             photo_mime_type=user.photo_mime_type,
-            face_analysis=face_analysis,
+            face_analysis=face_analysis_data,
             simple_analysis=simple_analysis,
         ),
     )
