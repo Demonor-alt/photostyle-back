@@ -3,7 +3,7 @@ from app.config.constants import AXIS_VALUE_MIN, AXIS_VALUE_MAX, AXIS_VALUE_DECI
 from functools import lru_cache  # 为配置读取增加缓存。
 from pathlib import Path  # 处理文件路径。
 
-import poyo  # 解析 YAML 配置。
+import yaml  # 解析 YAML 配置。
 
 _CONFIG_PATH = Path(__file__).resolve().parents[2] / "scripts" / "semantic_axes.yaml"  # 语义轴配置文件路径。
 
@@ -27,7 +27,7 @@ def load_semantic_axes_config() -> dict[str, dict[str, str]]:
     """读取语义轴配置，服务逻辑只依赖配置中的 axis name。"""
     if not _CONFIG_PATH.exists():
         raise FileNotFoundError(f"语义轴配置文件不存在: {_CONFIG_PATH}")
-    parsed = poyo.parse_string(_CONFIG_PATH.read_text(encoding="utf-8"))
+    parsed = yaml.safe_load(_CONFIG_PATH.read_text(encoding="utf-8"))
     axes = parsed.get("semantic_axes", []) if isinstance(parsed, dict) else []
     if not isinstance(axes, list):
         raise ValueError(f"语义轴配置 semantic_axes 必须是列表: {_CONFIG_PATH}")

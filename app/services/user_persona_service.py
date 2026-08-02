@@ -137,24 +137,24 @@ def _merge_semantic_axes(  # 融合旧画像、LLM 输出和 Milvus 候选值。
 def user_persona_semantic_axes( history_id: int
 ) -> dict[str, Any]:  # 返回结构化分析结果。
     current_history = get_history_record_by_history_id(history_id)  # 获取历史记录信息
-    comment = current_history.get("feedback_comment") # 获取历史记录评论
+    comment = current_history.feedback_comment or ""  # 获取历史记录评论。
     anchors = _search_semantic_anchors(comment, top_k=DEFAULT_ANCHOR_TOP_K)  # 检索语义锚点。
     anchor_axis_candidates = _best_similarity_by_axis(anchors)  # 计算每个轴的聚合候选结果。
 
     anchor_stats_by_axis = {candidate.axis_name: candidate for candidate in anchor_axis_candidates.axis_candidates}
-    current_persona = get_user_persona_by_id(int(current_history.get("user_id")))
+    user_id = int(current_history.user_id)  # 获取当前用户 ID。
+    current_persona = get_user_persona_by_id(user_id)
     payload = UserPersonaAnalysisRequest(
-        input_data=current_history.get("input_data") or {},
-        output_data=current_history.get("output_data") or {},
+        input_data=current_history.input_data or {},
+        output_data=current_history.output_data or {},
         comment=comment,
-        makeup_rating=current_history.get("makeup_rating") or 0,
-        outfit_rating=current_history.get("outfit_rating") or 0,
-        pose_rating=current_history.get("pose_rating") or 0,
+        makeup_rating=current_history.makeup_rating or 0,
+        outfit_rating=current_history.outfit_rating or 0,
+        pose_rating=current_history.pose_rating or 0,
         old_semantic_axes=current_persona.semantic_axes if current_persona else None,
         anchors=anchor_axis_candidates,
     )
     normalized = analyze_user_preference(payload)  # 分析用户偏好。
-    user_id = int(current_history.get("user_id"))  # 获取当前用户 ID。
     axis_effect_fields = _load_semantic_axis_effect_fields()  # 读取语义轴与评分影响字段配置。
     current_semantic_axes = current_persona.semantic_axes if current_persona else {}  # 获取旧画像语义轴，用户无画像时使用空字典。
     history_count = len(list_history_records_by_user_id(user_id))  # 查询用户历史数量，历史越多旧画像占比越大。
@@ -166,7 +166,7 @@ def user_persona_semantic_axes( history_id: int
         current_history=current_history,  # 传入当前历史记录评分。
         history_count=history_count,  # 传入用户历史数量。
     )  # 得到可直接入库的 semantic_axes 字典。
-    updated_persona = update_user_persona_by_id(  # 更新或创建用户画像数据库记录。
+    update_user_persona_by_id(  # 更新或创建用户画像数据库记录。
         user_id=user_id,  # 指定要更新的用户 ID。
         semantic_axes=semantic_axes,  # 写入轴名和值组成的最新语义轴画像。
     )  # 获取更新后的用户画像。
@@ -176,5 +176,5 @@ def user_persona_semantic_axes( history_id: int
         "semantic_anchors": anchors,  # 召回锚点列表。
         "semantic_anchor_axis_candidates": anchor_axis_candidates,
     }  # 结果对象结束。
-    logger.info("preference.analysis.result user_id=%s result=%s", current_history.get("user_id"), result)  # 记录最终结果。
+    logger.info("preference.analysis.result user_id=%s result=%s", user_id, result)  # 记录最终结果。
     return result  # 返回分析结果。

@@ -18,7 +18,7 @@ _RAG_QUEUE = os.getenv("RABBITMQ_FEEDBACK_RAG_QUEUE")  # 读取 RAG 队列名，
 
 def handle_review_submitted_for_rag(history_id: int) -> None:  # 定义 RAG 事件处理函数，参数为历史记录 ID。
     current_history = get_history_record_by_history_id(history_id)  # 根据历史记录 ID 查询当前历史记录。
-    user_id = int(current_history["user_id"])  # 从历史记录中读取用户 ID 并转为整数。
+    user_id = int(current_history.user_id)  # 从历史记录中读取用户 ID 并转为整数。
     embedding_payload = upsert_photo_style_embedding(history_id, user_id)  # 将当前点评相关内容写入或更新到向量库。
     logger.info("feedback.rag.embedding.saved history_id=%s metadata=%s", history_id, embedding_payload["metadata"])  # 记录 RAG 写入成功日志。
 
