@@ -135,8 +135,8 @@ def search_similar_anchor(request: SearchSimilarAnchorRequest) -> SearchSimilarA
 
     anchors: list[dict[str, Any]] = []  # 存放最终结果。
     for hit in search_result[0]:  # 遍历第一组搜索结果。
-        score = float(hit.score)  # 提取相似度分数。
-        if request.min_score is not None and score < request.min_score:  # 如果低于最小分数阈值。
+        similarity = float(hit.score)  # 提取相似度分数。
+        if request.min_similarity is not None and similarity < request.min_similarity:  # 如果低于最小分数阈值。
             continue  # 跳过该结果。
         entity = hit.entity  # 获取命中的实体。
         anchors.append(  # 将结果整理成字典后追加。
@@ -146,7 +146,7 @@ def search_similar_anchor(request: SearchSimilarAnchorRequest) -> SearchSimilarA
                 "text": entity.get("text"),  # 文本。
                 "axis_value": entity.get("axis_value"),  # 轴值。
                 "category": entity.get("category"),  # 类别。
-                "score": score,  # 相似度分数。
+                "similarity": similarity,  # 相似度。
             }  # 单条结果字典结束。
         )  # 结果追加结束。
 

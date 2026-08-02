@@ -4,6 +4,7 @@ from pydantic import Field  # 引入Field用于定义字段默认值
 from typing import Any  # 引入Any用于描述任意类型
 
 from .base import BaseSchema  # 引入公共Schema基类
+from .dto.semantic_anchor_dto import SemanticAnchorAxisCandidates  # 引入语义轴候选集合 DTO。
 from pydantic import BaseModel, Field  # 引入Pydantic模型基类和字段定义
 
 
@@ -67,7 +68,7 @@ class UserPersonaAnalysisRequest(BaseModel):  # 定义用户人格画像分析�
     outfit_rating: int = Field(default=0)  # 穿搭评分
     pose_rating: int = Field(default=0)  # 姿势评分
     old_semantic_axes: Any | None = None  # 旧历史画像
-    anchors: list[dict[str, Any]] | None = None  # 召回锚点
+    anchors: SemanticAnchorAxisCandidates | None = None  # 按语义轴聚合后的召回候选
 
 
 # qwen_user_persona_analysis_client.py响应

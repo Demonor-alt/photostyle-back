@@ -3,8 +3,6 @@ from __future__ import annotations  # 启用前向引用类型注解。
 
 import json  # 用于 JSON 序列化。
 import os  # 用于读取环境变量。
-from typing import Any  # 用于表示任意类型。
-
 import dashscope  # 引入 DashScope SDK。
 from dashscope import Generation  # 引入文本生成能力。
 from langchain_core.output_parsers import PydanticOutputParser  # 引入 Pydantic 输出解析器。
@@ -44,7 +42,7 @@ def analyze_user_preference(  # 对单个用户评论进行偏好分析。
             "input_data": payload.input_data,
             "output_data": payload.output_data,# TODO:这里要改成输出的标签，而不是整个输出数据
             "comment": payload.comment,
-            "anchors": payload.anchors,
+            "anchors": payload.anchors.model_dump(mode="json") if payload.anchors else None,
             "old_semantic_axes": payload.old_semantic_axes,
             "makeup_rating": payload.makeup_rating,
             "outfit_rating": payload.outfit_rating,

@@ -2,6 +2,7 @@
 # 后续新增语义轴时，只需要在 semantic_axes 下追加配置项，不需要修改 Milvus Service 代码
 semantic_axes:
   - axis_name: color_saturation
+    effect_field: outfit_rating
     label: 服装色彩饱和度
     description: >-
       低饱和 ←→ 高饱和。该轴只描述服装用色的鲜艳程度。
@@ -9,6 +10,7 @@ semantic_axes:
       中性 value -0.2~0.2：没有明显色彩偏好、基础色、黑白灰棕、颜色舒服即可。
       高方向 value 0.5~1：喜欢鲜艳色、明亮色、高饱和、撞色、多巴胺穿搭、强视觉冲击、红色黄色绿色等醒目色彩。
   - axis_name: accessory_level
+    effect_field: outfit_rating
     label: 配饰接受程度
     description: >-
       无配饰 ←→ 丰富配饰。该轴只描述耳环、项链、戒指、帽子、包、发饰、眼镜等装饰物的数量和存在感。
@@ -16,6 +18,7 @@ semantic_axes:
       中性 value -0.2~0.2：可有可无、简单点缀、日常小饰品、不抢主体。
       高方向 value 0.5~1：喜欢耳环项链、帽子包包搭配、精致装饰、叠戴、珍珠、金属感、发带、墨镜等强化造型的配饰。
   - axis_name: makeup_intensity
+    effect_field: makeup_rating
     label: 妆容浓淡
     description: >-
       清淡 ←→ 浓妆。该轴描述人像妆容的可见强度，包括底妆、眼妆、唇色、修容和整体妆感。
@@ -23,6 +26,7 @@ semantic_axes:
       中性 value -0.2~0.2：日常淡妆、气色好即可、干净自然、有妆但不重。
       高方向 value 0.5~1：浓妆、欧美妆、烟熏妆、红唇、猫眼眼线、强修容、舞台妆、精致全妆、妆容存在感强。
   - axis_name: pose_staged
+    effect_field: pose_rating
     label: 姿势摆拍感
     description: >-
       自然抓拍 ←→ 明显摆拍。该轴描述拍照姿势是否刻意设计、是否有模特感和摄影指导感。
@@ -30,6 +34,7 @@ semantic_axes:
       中性 value -0.2~0.2：简单站姿或坐姿、轻微引导、自然但有构图。
       高方向 value 0.5~1：模特姿势、杂志感动作、明显设计动作、定格 pose、强凹造型、专业棚拍姿态、舞台化姿势。
   - axis_name: body_openness
+    effect_field: pose_rating
     label: 姿势开放程度
     description: >-
       收敛小动作 ←→ 舒展大动作。该轴描述肢体打开程度、动作幅度和动态张力。
@@ -37,6 +42,7 @@ semantic_axes:
       中性 value -0.2~0.2：正常站坐、轻微伸展、动作不过分。
       高方向 value 0.5~1：张开手脚、大动作、奔跑跳跃、挥手、转圈、舒展身体、动态感、肢体线条打开。
   - axis_name: emotion_expression
+    effect_field: pose_rating
     label: 情绪表达强度
     description: >-
       平静治愈 ←→ 强烈表达。该轴描述照片传达的情绪外放程度和戏剧张力，不等同于甜美或成熟。
@@ -44,6 +50,7 @@ semantic_axes:
       中性 value -0.2~0.2：自然微笑、舒服、有情绪但不夸张。
       高方向 value 0.5~1：热烈、强情绪、戏剧感、张扬、性感张力、强烈眼神、大笑、哭感、愤怒感、故事冲突感。
   - axis_name: lighting_strength
+    effect_field: pose_rating
     label: 光线强度
     description: >-
       柔光低对比 ←→ 强光高对比。该轴只描述光线强弱、软硬、阴影和对比度。
