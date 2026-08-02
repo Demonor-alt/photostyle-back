@@ -134,7 +134,6 @@ def _merge_semantic_axes(  # 融合旧画像、LLM 输出和 Milvus 候选值。
         semantic_axes[axis_name] = round(clamp(merged_value, AXIS_VALUE_MIN, 1.0), 4)  # 限制最终轴值范围并保存。
     return semantic_axes  # 返回最终 semantic_axes 入库字典。
 
-# 用户画像semantic_axes部分
 def user_persona_semantic_axes( history_id: int
 ) -> dict[str, Any]:  # 返回结构化分析结果。
     current_history = get_history_record_by_history_id(history_id)  # 获取历史记录信息

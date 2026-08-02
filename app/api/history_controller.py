@@ -12,7 +12,7 @@ from app.schemas.vo.history_vo import (SuggestApiData, HistoryListResponse, Data
 from app.schemas.error import (FeedbackError,HistorySaveError)
 from app.services.orchestrator import format_sse_event, run_pipeline  # 引入调度入口和SSE格式化器
 from app.db.history_mapper import (get_database_status,list_history_records_by_user_id,save_history_record,update_history_feedback)
-from app.rabbitmq.feedback_tasks import publish_feedback_updated  # 引入反馈异步任务发布器
+from app.rabbitmq.feedback_tasks import publish_review_submitted  # 引入点评提交事件发布器
 from app.api.utils import save_upload_file, parse_tag_list  # 引入工具函数
 
 router = APIRouter()  # 创建路由实例
@@ -147,7 +147,7 @@ async def update_history(history_id: int, payload: FeedbackUpdateRequest) -> Api
     
     logger.info("feedback.update.publishing history_id=%s", history_id)  # 记录开始发布反馈更新事件
     try:
-        publish_feedback_updated(history_id)  # 将后续向量写入等操作交给 RabbitMQ 消费者异步执行
+        publish_review_submitted(history_id)  # 将 RAG 写入和用户画像更新交给 RabbitMQ 消费者异步执行
         logger.info("feedback.update.published history_id=%s", history_id)  # 记录成功发布事件
     except Exception as exc:
         logger.exception("feedback.update.publish_failed history_id=%s, error=%s", history_id, str(exc))

@@ -47,14 +47,3 @@ CREATE TABLE IF NOT EXISTS `user_persona` (
         FOREIGN KEY (`user_id`) REFERENCES `photo_style_users` (`id`)
         ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户人格画像表';
-
-CREATE TABLE IF NOT EXISTS `processed_events` (
-    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '记录ID',
-    `event_id` VARCHAR(128) NOT NULL COMMENT '业务事件ID',
-    `event_type` VARCHAR(128) NOT NULL COMMENT '事件类型',
-    `consumer` VARCHAR(128) NOT NULL COMMENT '消费者名称',
-    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '处理完成时间',
-    PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_processed_events_event_id` (`event_id`),
-    KEY `idx_processed_events_event_id` (`event_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='已处理事件表';
