@@ -8,7 +8,6 @@ CREATE TABLE IF NOT EXISTS `photo_style_users` (
     `photo_path` VARCHAR(500) NULL COMMENT '用户照片路径',
     `photo_mime_type` VARCHAR(100) NULL COMMENT '照片MIME类型',
     `face_analysis` JSON NULL COMMENT '人脸分析数据',
-    `simple_analysis` JSON NULL COMMENT '简化人脸分析数据',
     `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (`id`),
