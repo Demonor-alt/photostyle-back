@@ -2,8 +2,9 @@ from typing_extensions import Annotated  # 引入Annotated用于类型标注
 from fastapi import File, Form, UploadFile  # 引入FastAPI表单和文件处理
 from typing import Optional  # 引入类型标注用于描述字段结构
 
-
 from app.schemas.base import BaseSchema  # 引入公共Schema基类
+from app.schemas.orm.user import FaceAnalysis  # 引入结构化人脸分析模型
+
 
 #/photos/upload接口表单参数
 class UploadPhotoFormParams:  # 定义照片上传表单参数（用于FastAPI依赖注入）
@@ -35,8 +36,7 @@ class UpdateUserProfileRequest(BaseSchema):  # 定义更新用户资料请求模
     password: Optional[str] = None  # 新密码
     photo_path: Optional[str] = None  # 图片路径
     photo_mime_type: Optional[str] = None  # 图片类型
-    face_analysis: Optional[dict] = None  # 人脸分析结果
-    simple_analysis: Optional[dict] = None  # 简化人脸分析结果
+    face_analysis: Optional[FaceAnalysis] = None  # 人脸分析结果
 
 
 #/photos/upload保存用户照片参数
@@ -44,6 +44,5 @@ class UpsertUserPhotoRequest(BaseSchema):  # 定义保存或更新用户照片�
     user_id: int  # 用户ID
     photo_path: str  # 图片路径
     photo_mime_type: Optional[str] = None  # 图片类型
-    face_analysis: Optional[dict] = None  # 人脸分析结果
-    simple_analysis: Optional[dict] = None  # 简化人脸分析结果
+    face_analysis: Optional[FaceAnalysis] = None  # 人脸分析结果
 
