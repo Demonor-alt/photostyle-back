@@ -7,6 +7,7 @@ from .base import BaseSchema  # 引入公共Schema基类
 from .dto.semantic_anchor_dto import SemanticAnchorAxisCandidates  # 引入语义轴候选集合 DTO。
 from pydantic import BaseModel, Field  # 引入Pydantic模型基类和字段定义
 from app.schemas.orm.user import FaceAnalysis  # 引入简化人脸分析模型
+from app.schemas.orm.history import PhotoStyleInputData, PhotoStyleOutputData  # 引入拍照建议输入数据模型
 
 
 # qwen_suggest_client.py请求
@@ -34,14 +35,14 @@ class SuggestResponse(BaseSchema):  # 定义拍照建议响应模型
 
 # qwen_user_persona_analysis_client.py请求
 class UserPersonaAnalysisRequest(BaseModel):  # 定义用户人格画像分析请求结构
-    input_data: dict[str, Any] = Field(default_factory=dict)  # 输入数据
-    output_data: dict[str, Any] = Field(default_factory=dict)  # 输出数据
+    input_data: PhotoStyleInputData = Field(default_factory=PhotoStyleInputData) # 输入数据
+    output_data: PhotoStyleOutputData = Field(default_factory=PhotoStyleOutputData) # 输出数据
     comment: str = Field(default="")  # 用户评论
     makeup_rating: int = Field(default=0)  # 妆容评分
     outfit_rating: int = Field(default=0)  # 穿搭评分
     pose_rating: int = Field(default=0)  # 姿势评分
-    old_semantic_axes: Any | None = None  # 旧历史画像
-    anchors: SemanticAnchorAxisCandidates | None = None  # 按语义轴聚合后的召回候选
+    old_semantic_axes: Optional[SemanticAnchorAxisCandidates] = Field(default_factory=SemanticAnchorAxisCandidates)  # 旧历史画像
+    anchors: Optional[SemanticAnchorAxisCandidates] = Field(default_factory=SemanticAnchorAxisCandidates)  # 按语义轴聚合后的召回候选
 
 
 # qwen_user_persona_analysis_client.py响应
