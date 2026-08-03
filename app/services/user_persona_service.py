@@ -4,6 +4,7 @@ from typing import Any  # 用于表示任意类型。
 
 from app.schemas.dto.semantic_anchor_dto import (
     SearchSimilarAnchorResult,
+    SearchSimilarAnchorResponse,
     SemanticAnchorAxisCandidate,
     SemanticAnchorAxisCandidates,
     SemanticAnchorEvidence,
@@ -27,11 +28,12 @@ from app.config.constants import (
     MILVUS_USER_PERSONA_UPDATE_MAX
 )
 from app.utils.semantic_anchors import clamp, load_semantic_axes_config
+from app.schemas.orm.history import History  # 引入历史记录模型。
 
 _SCORE_FIELDS = ("makeup_rating", "outfit_rating", "pose_rating")  # 定义可影响语义轴更新幅度的评分字段。
 
 
-def _search_semantic_anchors(comment: str, top_k: int) -> list[SearchSimilarAnchorResult]:  # 根据评论检索语义锚点。
+def _search_semantic_anchors(comment: str, top_k: int) -> SearchSimilarAnchorResponse:  # 根据评论检索语义锚点。
     """使用评论文本向量检索全局 Semantic Anchor Library。"""  # 说明调用向量检索。
     anchors = search_similar_anchor(query_text=comment, top_k=top_k)  # 执行相似锚点搜索。
     normalized: list[SearchSimilarAnchorResult] = []  # 初始化标准化锚点列表。
@@ -47,13 +49,13 @@ def _search_semantic_anchors(comment: str, top_k: int) -> list[SearchSimilarAnch
             )
         )
     logger.info("preference.semantic_anchors.recalled count=%s", len(normalized))  # 记录召回数量。
-    return normalized  # 返回标准化锚点列表。
+    return SearchSimilarAnchorResponse(anchors=normalized)  # 返回标准化锚点列表。
 
 
-def _best_similarity_by_axis(anchors: list[SearchSimilarAnchorResult]) -> SemanticAnchorAxisCandidates:  # 按语义轴聚合召回锚点。
+def _best_similarity_by_axis(payload: SearchSimilarAnchorResponse) -> SemanticAnchorAxisCandidates:  # 按语义轴聚合召回锚点。
     """按轴聚合高质量锚点，返回语义轴候选 DTO。"""
     grouped: dict[str, list[SemanticAnchorEvidence]] = {}
-    for anchor in anchors:  # 遍历 Milvus 召回的每个语义锚点。
+    for anchor in payload.anchors:  # 遍历 Milvus 召回的每个语义锚点。
         axis_name = str(anchor.axis_name or "").strip()  # 读取锚点所属语义轴，并去掉首尾空白。
         if not axis_name:  # 如果锚点没有有效语义轴名称。
             continue  # 跳过无语义轴名称的锚点。
@@ -97,7 +99,7 @@ def _load_semantic_axis_effect_fields() -> dict[str, str]:  # 读取每个语义
     return effect_fields  # 返回语义轴影响字段映射。
 
 
-def _rating_update_weight(history: Any, effect_field: str) -> float:  # 根据评分计算本次新画像更新权重。
+def _rating_update_weight(history: History, effect_field: str) -> float:  # 根据评分计算本次新画像更新权重。
     scores = [float(getattr(history, field, 0) or 0) for field in _SCORE_FIELDS] if effect_field == "all" else [float(getattr(history, effect_field, 0) or 0)]  # 获取影响该语义轴的评分列表。
     score = max(scores) if scores else 0.0  # all 取最高分，单字段取对应分，分数越高更新越大。
     return clamp(score / 10.0, 0.0, 1.0) * 0.4  # 将评分归一化为最多 0.4 的新画像权重。
@@ -110,13 +112,13 @@ def _old_persona_weight(history_count: int) -> float:  # 根据用户历史数�
 def _merge_semantic_axes(  # 融合旧画像、LLM 输出和 Milvus 候选值。
     *,  # 强制调用方使用关键字参数，提升可读性。
     old_axes: dict[str, Any],  # 旧画像中的语义轴字典。
-    llm_axis_updates: list[dict[str, Any]],  # LLM 本次输出的语义轴更新列表。
+    llm_axis_updates: list[Any],  # LLM 本次输出的语义轴更新列表，元素通常是 Pydantic 模型。
     anchor_stats_by_axis: dict[str, SemanticAnchorAxisCandidate],  # Milvus 按语义轴聚合后的候选结果。
     axis_effect_fields: dict[str, str],  # semantic_axes.yaml 中的轴影响字段映射。
     current_history: Any,  # 当前历史记录，提供评分数据。
     history_count: int,  # 当前用户历史记录数量。
 ) -> dict[str, float]:  # 返回可直接入库的轴名和值字典。
-    llm_values = {item["axis_name"]: float(item["value"]) for item in llm_axis_updates if item.get("axis_name")}  # 将 LLM 更新列表转为轴名到值的映射。
+    llm_values = {item.axis_name: float(item.value) for item in llm_axis_updates if item.axis_name}  # 将 LLM 更新列表转为轴名到值的映射。
     old_weight = _old_persona_weight(history_count)  # 根据历史数量计算旧画像权重。
     semantic_axes: dict[str, float] = {}  # 初始化最终入库语义轴字典。
     for axis_name, effect_field in axis_effect_fields.items():  # 遍历配置文件中的全部语义轴。
@@ -144,28 +146,32 @@ def user_persona_semantic_axes( history_id: int
     anchor_stats_by_axis = {candidate.axis_name: candidate for candidate in anchor_axis_candidates.axis_candidates}
     user_id = int(current_history.user_id)  # 获取当前用户 ID。
     current_persona = get_user_persona_by_id(user_id)
+    input_data = current_history.input_data.model_dump(mode="json", by_alias=True)
+    output_data = current_history.output_data.model_dump(mode="json", by_alias=True)
+    old_semantic_axes = current_persona.semantic_axes.root if current_persona else None
     payload = UserPersonaAnalysisRequest(
-        input_data=current_history.input_data or {},
-        output_data=current_history.output_data or {},
+        input_data=input_data,
+        output_data=output_data,
         comment=comment,
         makeup_rating=current_history.makeup_rating or 0,
         outfit_rating=current_history.outfit_rating or 0,
         pose_rating=current_history.pose_rating or 0,
-        old_semantic_axes=current_persona.semantic_axes if current_persona else None,
+        old_semantic_axes=old_semantic_axes,
         anchors=anchor_axis_candidates,
     )
     normalized = analyze_user_preference(payload)  # 分析用户偏好。
     axis_effect_fields = _load_semantic_axis_effect_fields()  # 读取语义轴与评分影响字段配置。
-    current_semantic_axes = current_persona.semantic_axes if current_persona else {}  # 获取旧画像语义轴，用户无画像时使用空字典。
+    current_semantic_axes = current_persona.semantic_axes.root if current_persona else {}  # 获取旧画像语义轴，用户无画像时使用空字典。
     history_count = len(list_history_records_by_user_id(user_id))  # 查询用户历史数量，历史越多旧画像占比越大。
     semantic_axes = _merge_semantic_axes(  # 融合旧画像、LLM 本次结果和 Milvus 候选结果。
         old_axes=current_semantic_axes,  # 传入旧画像轴名和值。
-        llm_axis_updates=normalized["axis_updates"],  # 传入 LLM 本次分析出的语义轴更新。
+        llm_axis_updates=normalized.axis_updates,  # 传入 LLM 本次分析出的语义轴更新。
         anchor_stats_by_axis=anchor_stats_by_axis,  # 传入 Milvus 聚合候选结果。
         axis_effect_fields=axis_effect_fields,  # 传入配置文件中每个轴受哪个评分字段影响。
         current_history=current_history,  # 传入当前历史记录评分。
         history_count=history_count,  # 传入用户历史数量。
     )  # 得到可直接入库的 semantic_axes 字典。
+    normalized.axis_updates = [item.model_copy(update={"value": semantic_axes[item.axis_name]}) for item in normalized.axis_updates if item.axis_name in semantic_axes]  # 同步 Pydantic 分析结果中的最终融合值。
     update_user_persona_by_id(  # 更新或创建用户画像数据库记录。
         user_id=user_id,  # 指定要更新的用户 ID。
         semantic_axes=semantic_axes,  # 写入轴名和值组成的最新语义轴画像。
