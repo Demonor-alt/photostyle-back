@@ -32,7 +32,7 @@ def default_semantic_axes() -> dict:
     return dict(DEFAULT_SEMANTIC_AXES)
 
 
-class UserPersona(Base):
+class UserPersonaModel(Base):
     """用户人格画像表模型"""
     __tablename__ = "user_persona"
 
@@ -50,13 +50,3 @@ class UserPersona(Base):
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间")
 
     user = relationship("User", backref="persona")
-
-    def to_dict(self) -> dict:
-        """转换为字典，供服务层返回或日志记录使用。"""
-        return {
-            "id": self.id,
-            "user_id": self.user_id,
-            "semantic_axes": self.semantic_axes,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
-        }

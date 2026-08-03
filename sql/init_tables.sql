@@ -1,7 +1,7 @@
 -- PhotoStyle 建表 SQL
 -- 适用于 MySQL 8+
 
-CREATE TABLE IF NOT EXISTS `photo_style_users` (
+CREATE TABLE IF NOT EXISTS `user` (
     `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '用户ID',
     `username` VARCHAR(64) NOT NULL COMMENT '用户名',
     `password_hash` VARCHAR(255) NOT NULL COMMENT '密码哈希',
@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS `photo_style_users` (
     KEY `idx_photo_style_users_username` (`username`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户表';
 
-CREATE TABLE IF NOT EXISTS `photo_style_history` (
+CREATE TABLE IF NOT EXISTS `history` (
     `id` INT NOT NULL AUTO_INCREMENT COMMENT '记录ID',
     `user_id` BIGINT NOT NULL COMMENT '用户ID',
     `input_data` JSON NOT NULL COMMENT '输入数据',

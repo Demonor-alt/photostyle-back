@@ -4,9 +4,9 @@ from sqlalchemy import Column, BigInteger, String, Text, JSON, DateTime
 from app.db.database import Base
 
 
-class User(Base):
+class UserModel(Base):
     """用户表模型"""
-    __tablename__ = "photo_style_users"
+    __tablename__ = "user"
 
     id = Column(BigInteger, primary_key=True, autoincrement=True, comment="用户ID")
     username = Column(String(64), unique=True, nullable=False, index=True, comment="用户名")
@@ -14,6 +14,5 @@ class User(Base):
     photo_path = Column(String(500), nullable=True, comment="用户照片路径")
     photo_mime_type = Column(String(100), nullable=True, comment="照片MIME类型")
     face_analysis = Column(JSON, nullable=True, comment="人脸分析数据")
-    simple_analysis = Column(JSON, nullable=True, comment="简化人脸分析数据")
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, comment="创建时间")
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间")

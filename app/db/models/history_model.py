@@ -5,9 +5,9 @@ from sqlalchemy import Column, Integer, JSON, Boolean, DateTime, ForeignKey, Tex
 from app.db.database import Base
 
 
-class PhotoStyleHistory(Base):
+class HistoryModel(Base):
     """拍照风格历史记录表"""
-    __tablename__ = "photo_style_history"
+    __tablename__ = "history"
 
     id = Column(Integer, primary_key=True, autoincrement=True, comment="记录ID")
     user_id = Column(Integer, ForeignKey("photo_style_users.id", ondelete="CASCADE"), nullable=False, index=True, comment="用户ID")

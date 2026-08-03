@@ -1,9 +1,9 @@
 """用户人格画像 CRUD 操作封装。"""
-from typing import Any
-
 from app.db.database import SessionLocal
-from app.db.models.user_persona import UserPersona as UserPersonaModel, default_semantic_axes
+from app.db.models.user_persona_model import UserPersonaModel, default_semantic_axes
+from app.schemas.dto.user_persona_dto import UpsertUserPersonaRequest
 from app.schemas.orm.user_persona import UserPersona
+from app.utils.to_json import to_jsonable
 
 
 def get_or_create_user_persona(db, user_id: int) -> UserPersonaModel:
@@ -33,16 +33,12 @@ def get_user_persona_by_id(user_id: int) -> UserPersona | None:
         db.close()
 
 
-def update_user_persona_by_id(
-    *,
-    user_id: int,
-    semantic_axes: dict[str, Any],
-) -> UserPersona:
+def update_user_persona_by_id(request: UpsertUserPersonaRequest) -> UserPersona:
     """根据用户 ID 更新或创建用户人格画像。"""
     db = SessionLocal()
     try:
-        persona = get_or_create_user_persona(db, int(user_id))
-        persona.semantic_axes = semantic_axes
+        persona = get_or_create_user_persona(db, int(request.user_id))
+        persona.semantic_axes = to_jsonable(request.semantic_axes)
         db.commit()
         db.refresh(persona)
         return UserPersona.model_validate(persona)

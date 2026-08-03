@@ -1,10 +1,11 @@
 """用户服务层 - 使用 ORM"""
 import os
 from passlib.context import CryptContext
-from app.db.models.user import User as UserModel
+from app.db.models.user_model import UserModel
 from app.db.database import SessionLocal
 from app.schemas.dto.user_dto import UpsertUserPhotoRequest, UpdateUserProfileRequest
 from app.schemas.orm.user import User
+from app.utils.to_json import to_jsonable
 
 _pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -101,8 +102,8 @@ def upsert_user_photo_by_id(payload: UpsertUserPhotoRequest) -> User:
         
         user.photo_path = payload.photo_path
         user.photo_mime_type = payload.photo_mime_type
-        user.face_analysis = payload.face_analysis
-        user.simple_analysis = payload.simple_analysis
+        user.face_analysis = to_jsonable(payload.face_analysis)
+        user.simple_analysis = to_jsonable(payload.simple_analysis)
         
         db.commit()
         db.refresh(user)
@@ -119,19 +120,18 @@ def update_user_profile_by_id(payload: UpdateUserProfileRequest) -> User:
         if not user:
             raise ValueError("用户不存在")
         
-        original_username = user.username
-        if payload.new_username and payload.new_username != original_username:
+        if payload.new_username is not None:
             user.username = payload.new_username
-        if payload.password:
+        if payload.password is not None:
             user.password_hash = hash_password(payload.password)
         if payload.photo_path is not None:
             user.photo_path = payload.photo_path
         if payload.photo_mime_type is not None:
             user.photo_mime_type = payload.photo_mime_type
         if payload.face_analysis is not None:
-            user.face_analysis = payload.face_analysis
+            user.face_analysis = to_jsonable(payload.face_analysis)
         if payload.simple_analysis is not None:
-            user.simple_analysis = payload.simple_analysis
+            user.simple_analysis = to_jsonable(payload.simple_analysis)
         
         db.commit()
         db.refresh(user)
