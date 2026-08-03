@@ -17,9 +17,9 @@ suggest_response_parser = PydanticOutputParser(pydantic_object=SuggestResponse)
 
 # 统一调用 Qwen 生成拍照穿搭建议，避免业务层直接依赖 SDK 细节
 
-def generate_suggestion(payload: SuggestRequest, user_face_analysis: dict | None = None) -> SuggestResponse:  # 构建最终建议结果
+def generate_suggestion(payload: SuggestRequest) -> SuggestResponse:  # 构建最终建议结果
     # 优先使用数据库里的 face_analysis；如果请求里已经带了，也作为兜底补充
-    face_analysis = user_face_analysis or payload.face_analysis or {}  # 统一人脸分析数据来源
+    face_analysis = payload.face_analysis  # 统一人脸分析数据来源
 
     messages = [  # 组织给Qwen的消息
         {"role": "system", "content": """你是一个专业的拍照穿搭与姿势建议助手。
@@ -34,7 +34,6 @@ def generate_suggestion(payload: SuggestRequest, user_face_analysis: dict | None
         请严格按格式说明输出JSON，不要输出任何解释、代码块、Markdown或多余文本。"""
         },
         {"role": "user", "content": json.dumps({
-            "username": payload.username,
             "style": payload.style,
             "location": payload.location,
             "time": payload.time,

@@ -4,6 +4,7 @@ from typing import Optional  # 引入类型标注用于描述字段结构
 
 from app.schemas.base import BaseSchema  # 引入公共Schema基类
 from app.schemas.orm.user import FaceAnalysis  # 引入结构化人脸分析模型
+from pydantic import Field  # 引入Field用于默认工厂
 
 
 #/photos/upload接口表单参数
@@ -34,9 +35,7 @@ class UpdateUserProfileRequest(BaseSchema):  # 定义更新用户资料请求模
     user_id: int  # 用户ID
     new_username: Optional[str] = None  # 新用户名
     password: Optional[str] = None  # 新密码
-    photo_path: Optional[str] = None  # 图片路径
-    photo_mime_type: Optional[str] = None  # 图片类型
-    face_analysis: Optional[FaceAnalysis] = None  # 人脸分析结果
+
 
 
 #/photos/upload保存用户照片参数
@@ -44,5 +43,5 @@ class UpsertUserPhotoRequest(BaseSchema):  # 定义保存或更新用户照片�
     user_id: int  # 用户ID
     photo_path: str  # 图片路径
     photo_mime_type: Optional[str] = None  # 图片类型
-    face_analysis: Optional[FaceAnalysis] = None  # 人脸分析结果
+    face_analysis: Optional[FaceAnalysis] = Field(default_factory=FaceAnalysis)  # 人脸分析结果
 

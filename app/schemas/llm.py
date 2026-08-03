@@ -6,12 +6,11 @@ from typing import Any  # 引入Any用于描述任意类型
 from .base import BaseSchema  # 引入公共Schema基类
 from .dto.semantic_anchor_dto import SemanticAnchorAxisCandidates  # 引入语义轴候选集合 DTO。
 from pydantic import BaseModel, Field  # 引入Pydantic模型基类和字段定义
-from app.schemas.orm.user import SimpleFaceAnalysis  # 引入简化人脸分析模型
+from app.schemas.orm.user import FaceAnalysis  # 引入简化人脸分析模型
 
 
 # qwen_suggest_client.py请求
 class SuggestRequest(BaseSchema):  # 定义拍照建议请求模型
-    username: str  # 当前登录用户名
     style: str  # 用户选择的风格
     location: Optional[str] = None  # 拍照地点
     time: Optional[str] = None  # 拍照时间
@@ -22,7 +21,7 @@ class SuggestRequest(BaseSchema):  # 定义拍照建议请求模型
     extra_tags: List[str] = Field(default_factory=list)  # 额外选择项，便于前端一次性上传全部选项
     image_path: Optional[str] = None  # 图片路径
     image_mime_type: Optional[str] = None  # 图片MIME类型
-    face_analysis: Optional[dict] = None  # 可选的人脸分析结果，后端会优先从数据库获取
+    face_analysis: Optional[FaceAnalysis] = None  # 可选的人脸分析结果，后端会优先从数据库获取
 
 # qwen_suggest_client.py响应
 class SuggestResponse(BaseSchema):  # 定义拍照建议响应模型
