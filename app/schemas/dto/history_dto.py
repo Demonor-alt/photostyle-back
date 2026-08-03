@@ -47,9 +47,18 @@ class HistoryRecord(BaseSchema):  # 定义历史记录模型
     reviewed: bool = False  # 是否已点评
     created_at: Optional[str] = None  # 创建时间
 
+
 #/history/{history_id}/feedback接口表单参数
 class FeedbackUpdateRequest(BaseSchema):  # 定义反馈更新请求模型
     makeup_rating: int = 0  # 妆容评分
     outfit_rating: int = 0  # 穿搭评分
     pose_rating: int = 0  # 姿势评分
     feedback_comment: Optional[str] = None  # 点评内容
+
+
+class UpsertHistoryRequest(BaseSchema):
+    id: Optional[int] = None
+    makeup_rating: int = 0
+    outfit_rating: int = 0
+    pose_rating: int = 0
+    feedback_comment: Optional[str] = None

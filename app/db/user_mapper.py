@@ -103,7 +103,6 @@ def upsert_user_photo_by_id(payload: UpsertUserPhotoRequest) -> User:
         user.photo_path = payload.photo_path
         user.photo_mime_type = payload.photo_mime_type
         user.face_analysis = to_jsonable(payload.face_analysis)
-        user.simple_analysis = to_jsonable(payload.simple_analysis)
         
         db.commit()
         db.refresh(user)
@@ -130,8 +129,6 @@ def update_user_profile_by_id(payload: UpdateUserProfileRequest) -> User:
             user.photo_mime_type = payload.photo_mime_type
         if payload.face_analysis is not None:
             user.face_analysis = to_jsonable(payload.face_analysis)
-        if payload.simple_analysis is not None:
-            user.simple_analysis = to_jsonable(payload.simple_analysis)
         
         db.commit()
         db.refresh(user)

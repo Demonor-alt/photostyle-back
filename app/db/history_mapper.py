@@ -3,7 +3,7 @@ import os  # 引入os用于读取环境变量
 from sqlalchemy import text  # 引入text用于执行原生SQL
 from app.db.models.history_model import HistoryModel  # 引入历史模型
 from app.db.database import SessionLocal, engine  # 引入数据库会话和引擎
-from app.schemas.dto.history_dto import HistoryRecord
+from app.schemas.dto.history_dto import HistoryRecord, UpsertHistoryRequest
 from app.schemas.dto.history_user_dto import HistoryUserRecord
 from app.schemas.orm.history import History
 from app.utils.to_json import to_jsonable
@@ -57,18 +57,18 @@ def save_history_record(record: HistoryRecord | HistoryUserRecord) -> History:
         db.close()
 
 
-def update_history_feedback(history_id: int, makeup_rating: int, outfit_rating: int, pose_rating: int, feedback_comment: str | None) -> History:
+def update_history_feedback(request: UpsertHistoryRequest) -> History:
     """更新历史记录反馈并返回最新记录"""
     db = SessionLocal()  # 创建数据库会话
     try:  # 开始事务
-        history = db.query(HistoryModel).filter(HistoryModel.id == history_id).first()  # 查找历史记录
+        history = db.query(HistoryModel).filter(HistoryModel.id == request.id).first()  # 查找历史记录
         if not history:  # 如果没有找到
             raise ValueError("历史记录不存在")  # 直接抛出异常
 
-        history.makeup_rating = makeup_rating  # 更新妆容评分
-        history.outfit_rating = outfit_rating  # 更新穿搭评分
-        history.pose_rating = pose_rating  # 更新姿势评分
-        history.feedback_comment = feedback_comment  # 更新点评内容
+        history.makeup_rating = request.makeup_rating  # 更新妆容评分
+        history.outfit_rating = request.outfit_rating  # 更新穿搭评分
+        history.pose_rating = request.pose_rating  # 更新姿势评分
+        history.feedback_comment = request.feedback_comment  # 更新点评内容
         history.reviewed = True  # 标记为已点评
         db.commit()  # 提交事务
         db.refresh(history)  # 刷新对象

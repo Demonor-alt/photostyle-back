@@ -1,19 +1,18 @@
-import json  # 引入json用于构造SSE数据
 from app.utils.runtime import logger
 from fastapi import APIRouter, Depends  # 引入路由与依赖注入能力
-from pydantic import BaseModel  # 引入Pydantic基础模型
-from fastapi.responses import StreamingResponse  # 引入流式响应
 
 from app.schemas.base import ApiResponse
 from app.schemas.llm import (SuggestRequest)
 from app.schemas.dto.history_dto import (SuggestFormParams,HistoryRecord,FeedbackUpdateRequest)
 from app.schemas.dto.history_user_dto import HistoryUserRecord
+from app.schemas.orm.history import PhotoStyleInputData, PhotoStyleOutputData
 from app.schemas.vo.history_vo import (SuggestApiData, HistoryListResponse, DatabaseStatusResponse)
 from app.schemas.error import (FeedbackError,HistorySaveError)
-from app.services.orchestrator import format_sse_event, run_pipeline  # 引入调度入口和SSE格式化器
+from app.services.orchestrator import run_pipeline  # 引入调度入口和SSE格式化器
 from app.db.history_mapper import (get_database_status,list_history_records_by_user_id,save_history_record,update_history_feedback)
 from app.rabbitmq.feedback_tasks import publish_review_submitted  # 引入点评提交事件发布器
-from app.api.utils import save_upload_file, parse_tag_list  # 引入工具函数
+from app.api.utils import parse_tag_list  # 引入工具函数
+from app.schemas.dto.history_dto import UpsertHistoryRequest
 
 router = APIRouter()  # 创建路由实例
 
@@ -41,16 +40,22 @@ async def suggest(  # 定义支持表单上传的建议接口
     result = run_pipeline(payload)  # 调用调度流程生成建议
     logger.info("suggest.response=%s", result.model_dump_json())
     try:
-        # 准备input_data，移除face_analysis和username，清空extra_tags
-        input_data = payload.model_dump()
-        input_data.pop("face_analysis", None)
-        input_data.pop("username", None)
-        input_data["extra_tags"] = []
+        input_data = PhotoStyleInputData(
+            style=payload.style,
+            location=payload.location,
+            time=payload.time,
+            weather=payload.weather,
+            face_tags=payload.face_tags,
+            shot_tags=payload.shot_tags,
+            pose_tags=payload.pose_tags,
+            extra_tags=[],
+        )
+        output_data = PhotoStyleOutputData.model_validate(result.model_dump())
 
         history_record = HistoryUserRecord(
             user_id=form.user_id,
             input_data=input_data,
-            output_data=result.model_dump(),
+            output_data=output_data,
             makeup_rating=0,
             outfit_rating=0,
             pose_rating=0,
@@ -66,49 +71,6 @@ async def suggest(  # 定义支持表单上传的建议接口
         message="建议生成成功",
         data=SuggestApiData(**{**result.model_dump(), "history": history}),
     )
-
-
-# @router.post("/suggest/stream")  # 定义流式建议生成接口
-# async def suggest_stream(  # 定义SSE流式接口
-#     form: SuggestFormParams = Depends(),
-# ) -> StreamingResponse:  # 返回SSE响应
-#     image_path = None  # 初始化图片路径
-#     image_mime_type = None  # 初始化图片MIME类型
-#     if form.image is not None:  # 如果前端上传了文件
-#         image_path, image_mime_type = save_upload_file(form.image)  # 保存图片到本地
-#     payload = SuggestRequest(  # 组装请求模型
-#         username=form.username,  # 传入用户名
-#         image_path=image_path,  # 传入图片路径
-#         image_mime_type=image_mime_type,  # 传入MIME类型
-#         style=form.style,  # 传入风格
-#         location=form.location,  # 传入地点
-#         time=form.time,  # 传入时间
-#         weather=form.weather,  # 传入天气
-#         face_tags=parse_tag_list(form.face_tags),  # 解析人脸标签
-#         shot_tags=parse_tag_list(form.shot_tags),  # 解析画幅标签
-#         pose_tags=parse_tag_list(form.pose_tags),  # 解析姿势标签
-#         extra_tags=parse_tag_list(form.extra_tags),  # 解析全部附加选择项
-#     )  # 请求组装结束
-#     logger.info("suggest.stream.request=%s", payload.model_dump_json(ensure_ascii=False))
-
-#     def event_generator():  # 定义SSE事件生成器
-#         try:
-#             yield format_sse_event("status", {"message": "started"})  # 发送开始状态
-#             for chunk in stream_pipeline(payload):  # 遍历LangGraph流式输出
-#                 logger.info("suggest.stream.chunk=%s", json.dumps(chunk, ensure_ascii=False, default=str))
-#                 yield format_sse_event("chunk", chunk)  # 发送每个步骤chunk
-#             yield format_sse_event("done", {"message": "completed"})  # 发送完成状态
-#         except Exception as exc:  # 捕获流中任何异常，防止 chunked 流被静默中断
-#             import traceback
-#             traceback.print_exc()
-#             logger.exception("suggest.stream.error")
-#             yield format_sse_event("error", {"message": str(exc)})  # 将错误通过 SSE 发给前端
-
-#     return StreamingResponse(
-#         event_generator(),
-#         media_type="text/event-stream",
-#         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
-#     )
 
 
 @router.get("/db/status", response_model=ApiResponse[DatabaseStatusResponse])  # 定义数据库状态接口
@@ -137,13 +99,15 @@ async def get_history(user_id: int | None = None) -> ApiResponse[HistoryListResp
 
 @router.post("/history/{history_id}/feedback", response_model=ApiResponse[None])
 async def update_history(history_id: int, payload: FeedbackUpdateRequest) -> ApiResponse[None]:
-    update_history_feedback(  # 更新历史记录并获取最新数据
-        history_id,  # 传入历史ID
-        payload.makeup_rating,  # 传入妆容评分
-        payload.outfit_rating,  # 传入穿搭评分
-        payload.pose_rating,  # 传入姿势评分
-        payload.feedback_comment,  # 传入点评内容
-    )  # 更新结束
+    update_history_feedback(
+        UpsertHistoryRequest(
+            id=history_id,
+            makeup_rating=payload.makeup_rating,
+            outfit_rating=payload.outfit_rating,
+            pose_rating=payload.pose_rating,
+            feedback_comment=payload.feedback_comment,
+        )
+    )
     
     logger.info("feedback.update.publishing history_id=%s", history_id)  # 记录开始发布反馈更新事件
     try:
