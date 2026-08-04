@@ -111,25 +111,25 @@ def build_photo_style_embedding_payload(history: History, user_profile: User | N
     user_id = int(history.user_id)  # 获取用户 ID
     avg_score = _get_history_avg_score(history)  # 获取平均评分
     # metadata 保留可过滤字段和完整快照，便于检索、重排序和问题排查
-    metadata = {  # 构建元数据字典
-        "history_id": history_id,  # 历史记录 ID
-        "doc_type": "history_feedback",  # 文档类型标记为历史反馈
-        "time": input_data.time,  # 时间信息
-        "style": input_data.style,  # 风格信息
-        "weather": input_data.weather,  # 天气信息
-        "location": input_data.location,  # 地点信息
-        "tags": _normalize_tags(input_data.extra_tags),  # 标签列表
-        "avg_score": avg_score,  # 平均评分
-        "is_positive_feedback": avg_score is not None and float(avg_score) >= IS_POSITIVE_FEEDBACK_SCORE,  # 判断是否为正向反馈（评分>=IS_POSITIVE_FEEDBACK_SCORE）
-        "created_at": history.created_at,  # 创建时间
-        "updated_at": datetime.utcnow().isoformat(),  # 更新时间为当前时间
-        "input_data": to_jsonable(input_data),  # 完整输入数据快照
-        "output_data": to_jsonable(output_data),  # 完整输出数据快照
-        "feedback_comment": history.feedback_comment,  # 用户反馈评论
-        "simple_analysis": to_jsonable(user_profile.face_analysis.simple_analysis ),  # 用户长相分析
-        "source": "history_feedback",  # 数据来源标记
-        "embedding_model": get_embedding_model_name(),  # 使用的向量模型名称
-    }
+    metadata = to_jsonable({  # 构建并递归转换元数据字典，确保 Milvus JSON 字段可序列化。
+        "history_id": history_id,  # 历史记录 ID。
+        "doc_type": "history_feedback",  # 文档类型标记为历史反馈。
+        "time": input_data.time,  # 时间信息。
+        "style": input_data.style,  # 风格信息。
+        "weather": input_data.weather,  # 天气信息。
+        "location": input_data.location,  # 地点信息。
+        "tags": _normalize_tags(input_data.extra_tags),  # 标签列表。
+        "avg_score": avg_score,  # 平均评分。
+        "is_positive_feedback": avg_score is not None and float(avg_score) >= IS_POSITIVE_FEEDBACK_SCORE,  # 判断是否为正向反馈。
+        "created_at": history.created_at,  # 创建时间，后续会转成 ISO 字符串。
+        "updated_at": datetime.utcnow(),  # 更新时间，后续会转成 ISO 字符串。
+        "input_data": input_data,  # 完整输入数据快照，后续会递归转换。
+        "output_data": output_data,  # 完整输出数据快照，后续会递归转换。
+        "feedback_comment": history.feedback_comment,  # 用户反馈评论。
+        "simple_analysis": user_profile.face_analysis.simple_analysis,  # 用户长相分析，后续会递归转换。
+        "source": "history_feedback",  # 数据来源标记。
+        "embedding_model": get_embedding_model_name(),  # 使用的向量模型名称。
+    })  # 元数据 JSON 兼容转换完成。
     return PhotoStyleEmbeddingPayload(  # 返回完整的 Pydantic 载荷对象。
         history_id=history_id,  # 历史记录 ID
         user_id=user_id,  # 用户 ID
@@ -204,16 +204,18 @@ def upsert_photo_style_embedding(history_id: int, user_id: int | None = None) ->
 
     # 先删旧记录再插入新记录，修正原本 insert-only 导致的重复向量问题。
     _delete_existing_history_embedding(collection, payload.history_id, payload.user_id)
-    logger.info("开始插入新向量数据")
-    entity = [
-        [payload.history_id],
-        [payload.user_id],
-        [payload.metadata.get("doc_type")],
-        [payload.embedding],
-        [payload.metadata],
-    ]
-    collection.insert(data=entity)
-    collection.flush()
+    logger.info("开始插入新向量数据")  # 记录即将插入新向量数据。
+    entity = [  # 使用 Milvus 行式实体格式，避免 JSON 字段在列式插入时被误判为普通字典类型。
+        {  # 构造单条向量实体。
+            "history_id": payload.history_id,  # 写入历史记录 ID。
+            "user_id": payload.user_id,  # 写入用户 ID。
+            "doc_type": payload.metadata.get("doc_type"),  # 写入文档类型。
+            _VECTOR_FIELD: payload.embedding,  # 写入向量字段。
+            "metadata": payload.metadata,  # 写入 JSON 元数据字段。
+        }  # 单条实体构造结束。
+    ]  # 行式实体列表构造结束。
+    collection.insert(data=entity)  # 按字典行式实体插入，确保 metadata 以 JSON 对象写入。
+    collection.flush()  # 刷新集合，确保新向量持久化可见。
     logger.info(
         "向量写入成功 history_id=%s user_id=%s model=%s",
         payload.history_id,

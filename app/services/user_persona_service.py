@@ -36,19 +36,20 @@ _SCORE_FIELDS = ("makeup_rating", "outfit_rating", "pose_rating")  # 定义可�
 
 def _search_semantic_anchors(comment: str, top_k: int) -> SearchSimilarAnchorResponse:  # 根据评论检索语义锚点。
     """使用评论文本向量检索全局 Semantic Anchor Library。"""  # 说明调用向量检索。
-    anchors = search_similar_anchor(SearchSimilarAnchorRequest(query_text=comment, top_k=top_k))  # 执行相似锚点搜索。
+    response = search_similar_anchor(SearchSimilarAnchorRequest(query_text=comment, top_k=top_k))  # 执行相似锚点搜索。
     normalized: list[SearchSimilarAnchorResult] = []  # 初始化标准化锚点列表。
-    for anchor in anchors:  # 遍历召回锚点。
-        normalized.append(
-            SearchSimilarAnchorResult(
-                id=anchor.id,
-                axis_name=anchor.axis_name,
-                text=anchor.text,
-                axis_value=anchor.axis_value,
-                category=anchor.category,
-                similarity=clamp(anchor.similarity, min_value=SIMILARITY_MIN, max_value=SIMILARITY_MAX),
-            )
-        )
+    for anchor in response.anchors:  # 遍历召回锚点。
+        anchor_data = anchor.model_dump() if hasattr(anchor, "model_dump") else dict(anchor)  # 兼容 Pydantic 对象和可转字典的元组项。
+        normalized.append(  # 追加标准化后的语义锚点结果。
+            SearchSimilarAnchorResult(  # 构造统一的语义锚点 DTO，避免直接访问元组属性时报错。
+                id=anchor_data.get("id"),  # 读取 Milvus 实体 ID。
+                axis_name=anchor_data.get("axis_name"),  # 读取语义轴名称。
+                text=anchor_data.get("text"),  # 读取语义锚点文本。
+                axis_value=anchor_data.get("axis_value"),  # 读取语义轴取值。
+                category=anchor_data.get("category"),  # 读取锚点类别。
+                similarity=clamp(float(anchor_data.get("similarity", SIMILARITY_MIN)), min_value=SIMILARITY_MIN, max_value=SIMILARITY_MAX),  # 读取并限制相似度范围。
+            )  # 单条标准化结果构造结束。
+        )  # 标准化结果追加结束。
     logger.info("preference.semantic_anchors.recalled count=%s", len(normalized))  # 记录召回数量。
     return SearchSimilarAnchorResponse(anchors=normalized)  # 返回标准化锚点列表。
 

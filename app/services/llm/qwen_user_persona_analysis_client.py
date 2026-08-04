@@ -13,6 +13,7 @@ from app.schemas.llm import PreferenceAnalysisOutput,UserPersonaAnalysisRequest 
 from app.config.constants import QWEN_BASE_MODEL # 引入基础模型名称
 from app.utils.semantic_anchors import clamp # 引入语义轴取值标准化方法
 from app.config.constants import AXIS_VALUE_MIN, AXIS_VALUE_MAX,AXIS_VALUE_DEFAULT # 引入语义轴取值最小值和最大值
+from app.utils.to_json import to_jsonable  # 引入递归 JSON 兼容转换工具，避免 Pydantic 对象序列化失败。
 
 # 配置 DashScope 百炼 API 地址，保持和现有 Qwen 服务一致。  # 让 SDK 指向正确的服务地址。
 dashscope.base_http_api_url = os.getenv("DASHSCOPE_API_URL")  # 设置 DashScope 基础 API 地址。
@@ -38,16 +39,16 @@ def analyze_user_preference(  # 对单个用户评论进行偏好分析。
         "JSON 字段必须包含 axis_updates"  # 要求字段完整。
         f"其中 value 表示你对用户偏好的判断，范围 {AXIS_VALUE_MIN} 到 {AXIS_VALUE_MAX}，如果用户偏好没涉及当前语义轴，则value为{AXIS_VALUE_DEFAULT}，负数表示用户与语义轴的描述相反，正数表示用户与语义轴的描述一致，要有依据，不要自行融合 Milvus similarity。reason 表示判断原因，简短说明。"  # 置信度说明。
         },
-        {"role": "user", "content": json.dumps({
-            "input_data": payload.input_data,
-            "output_data": payload.output_data,# TODO:这里要改成输出的标签，而不是整个输出数据
-            "comment": payload.comment,
-            "anchors": payload.anchors.model_dump(mode="json") if payload.anchors else None,
-            "old_semantic_axes": payload.old_semantic_axes,
-            "makeup_rating": payload.makeup_rating,
-            "outfit_rating": payload.outfit_rating,
-            "pose_rating": payload.pose_rating,
-        }, ensure_ascii=False)},  # 用户消息。
+        {"role": "user", "content": json.dumps(to_jsonable({  # 递归转换为 JSON 兼容结构后再序列化，避免 Pydantic 对象报错。
+            "input_data": payload.input_data,  # 传入当前请求输入数据。
+            "output_data": payload.output_data,  # 传入当前生成方案输出数据。
+            "comment": payload.comment,  # 传入用户评论文本。
+            "anchors": payload.anchors,  # 传入按语义轴聚合后的 Milvus 召回候选。
+            "old_semantic_axes": payload.old_semantic_axes,  # 传入旧用户语义轴画像。
+            "makeup_rating": payload.makeup_rating,  # 传入妆容评分。
+            "outfit_rating": payload.outfit_rating,  # 传入穿搭评分。
+            "pose_rating": payload.pose_rating,  # 传入姿势评分。
+        }), ensure_ascii=False)},  # 用户消息。
     ]  # 消息组装结束。
     logger.info("preference.analysis.request comment=%s anchors=%s",payload.comment,payload.anchors)  # 日志记录结束。
     response = Generation.call(  # 调用 Qwen 生成接口。
