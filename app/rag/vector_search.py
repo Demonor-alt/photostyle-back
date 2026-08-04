@@ -11,6 +11,7 @@ from app.rag.vector_writing import (
     get_collection_name,
 )
 from app.rag.milvus_client import ( get_vector_field_name )  # 复用通用 Milvus 客户端
+from app.schemas.dto.semantic_anchor_dto import PhotoStyleMemorySearchResult  # 引入照片风格历史记忆检索结果 DTO。
 from app.utils.runtime import logger
 
 # HNSW 检索参数；ef 越高召回越好但延迟越高，当前值适合作为业务默认值。
@@ -83,7 +84,7 @@ def search_photo_style_memories(
     top_k: int = 5,
     min_score: float | None = None,
     filters: dict[str, Any] | None = None,
-) -> list[dict[str, Any]]:
+) -> list[PhotoStyleMemorySearchResult]:
     """检索与当前 query 最相关的用户照片风格历史记忆。"""
     if not query_text.strip():
         return []
@@ -102,7 +103,7 @@ def search_photo_style_memories(
         output_fields=["id", "history_id", "user_id", "doc_type", "text", "metadata"],
     )
 
-    memories: list[dict[str, Any]] = []
+    memories: list[PhotoStyleMemorySearchResult] = []
     for hit in search_result[0]:
         score = float(hit.score)
         # min_score 用于丢弃弱相关结果，避免低质量上下文污染 LLM prompt。
@@ -111,15 +112,15 @@ def search_photo_style_memories(
         entity = hit.entity
         metadata = entity.get("metadata") or {}
         memories.append(
-            {
-                "id": entity.get("id"),
-                "history_id": entity.get("history_id"),
-                "user_id": entity.get("user_id"),
-                "doc_type": entity.get("doc_type"),
-                "text": entity.get("text"),
-                "metadata": metadata,
-                "score": score,
-            }
+            PhotoStyleMemorySearchResult(
+                id=entity.get("id"),
+                history_id=entity.get("history_id"),
+                user_id=entity.get("user_id"),
+                doc_type=entity.get("doc_type"),
+                text=entity.get("text"),
+                metadata=metadata,
+                score=score,
+            )
         )
 
     logger.info(

@@ -5,6 +5,34 @@ from pydantic import Field
 from app.schemas.base import BaseSchema
 
 
+class PhotoStyleEmbeddingPayload(BaseSchema):
+    """照片风格历史记录向量写入载荷。"""
+    history_id: int = Field(description="历史记录 ID")
+    user_id: int = Field(description="用户 ID")
+    embedding: list[float] = Field(description="文本向量")
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Milvus 元数据")
+
+
+class PhotoStyleMemorySearchResult(BaseSchema):
+    """照片风格历史记忆检索结果。"""
+    id: int | None = Field(default=None, description="Milvus 实体 ID")
+    history_id: int | None = Field(default=None, description="历史记录 ID")
+    user_id: int | None = Field(default=None, description="用户 ID")
+    doc_type: str | None = Field(default=None, description="文档类型")
+    text: str | None = Field(default=None, description="文本内容")
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Milvus 元数据")
+    score: float = Field(description="相似度分数")
+
+
+class SemanticAnchorWriteItem(BaseSchema):
+    """待写入 Milvus 的语义锚点。"""
+    axis_name: str = Field(default="", description="语义轴名称")
+    text: str = Field(default="", description="语义锚点文本")
+    axis_value: float = Field(default=0.0, description="语义轴取值")
+    category: str = Field(default="", description="锚点类别")
+    embedding: list[float] = Field(default_factory=list, description="语义锚点向量")
+
+
 # 检索语义锚点请求
 class SearchSimilarAnchorRequest(BaseSchema):
     """语义锚点相似检索参数。"""

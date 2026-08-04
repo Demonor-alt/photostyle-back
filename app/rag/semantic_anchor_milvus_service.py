@@ -8,7 +8,7 @@ from pymilvus import Collection, CollectionSchema, DataType, FieldSchema, utilit
 
 from app.rag.embedding import embed_text, get_embedding_dimension, get_embedding_model_name  # 引入向量化与模型信息工具。
 from app.rag.milvus_client import connect_milvus  # 复用通用 Milvus 连接与字段配置。
-from app.schemas.dto.semantic_anchor_dto import SearchSimilarAnchorRequest, SearchSimilarAnchorResponse  # 引入语义锚点检索 DTO。
+from app.schemas.dto.semantic_anchor_dto import SearchSimilarAnchorRequest, SearchSimilarAnchorResponse, SearchSimilarAnchorResult, SemanticAnchorWriteItem  # 引入语义锚点检索 DTO。
 from app.utils.runtime import logger  # 引入运行时日志对象。
 from app.utils.semantic_anchors import get_semantic_axis_names  # 引入语义轴配置工具。
 
@@ -59,34 +59,34 @@ def _ensure_collection() -> Collection:  # 确保集合存在并返回集合对�
     return collection  # 返回集合对象。
 
 
-def insert_anchors(anchors: list[dict[str, Any]]) -> None:  # 定义批量插入语义锚点的函数。
+def insert_anchors(anchors: list[SemanticAnchorWriteItem]) -> None:  # 定义批量插入语义锚点的函数。
     """向全局 Semantic Anchor Library 批量插入语义锚点。"""  # 函数文档：说明该函数用于批量写入全局语义锚点库。
     if not anchors:  # 如果传入的锚点列表为空。
         return  # 直接返回，不执行后续插入逻辑。
 
-    normalized: list[dict[str, Any]] = []  # 初始化标准化后的锚点数据列表。
+    normalized: list[SemanticAnchorWriteItem] = []  # 初始化标准化后的锚点数据列表。
     for index, anchor in enumerate(anchors, start=1):  # 遍历输入锚点，并从 1 开始记录序号。
-        axis_name = str(anchor.get("axis_name", "")).strip()  # 提取并清理语义轴名称。
-        text = str(anchor.get("text", "")).strip()  # 提取并清理锚点文本。
+        axis_name = str(anchor.axis_name).strip()  # 提取并清理语义轴名称。
+        text = str(anchor.text).strip()  # 提取并清理锚点文本。
         if not text:  # 如果锚点文本为空。
             raise ValueError(f"第 {index} 条 semantic anchor text cannot be empty")  # 抛出异常提示对应序号的文本不能为空。
         _ensure_axis_configured(axis_name)  # 校验该语义轴是否已在配置中定义。
         normalized.append(  # 将处理后的锚点追加到标准化列表。
-            {  # 构造单条标准化锚点数据。
-                "axis_name": axis_name,  # 保存语义轴名称。
-                "text": text,  # 保存锚点文本。
-                "embedding": embed_text(text),  # 生成并保存锚点文本的向量表示。
-                "axis_value": float(anchor.get("axis_value", 0)),  # 提取语义轴数值并转换为浮点数。
-                "category": str(anchor.get("category", "")).strip(),  # 提取并清理锚点分类。
-            }  # 单条标准化锚点数据构造结束。
+            SemanticAnchorWriteItem(  # 构造单条标准化锚点数据。
+                axis_name=axis_name,  # 保存语义轴名称。
+                text=text,  # 保存锚点文本。
+                embedding=embed_text(text),  # 生成并保存锚点文本的向量表示。
+                axis_value=float(anchor.axis_value),  # 提取语义轴数值并转换为浮点数。
+                category=str(anchor.category).strip(),  # 提取并清理锚点分类。
+            )  # 单条标准化锚点数据构造结束。
         )  # 追加标准化锚点数据结束。
     collection = _ensure_collection()  # 获取或创建 Milvus 语义锚点集合。
     entity = [  # 按 Milvus 插入格式组织字段列数据。
-        [anchor["axis_name"] for anchor in normalized],  # 收集所有锚点的语义轴名称列。
-        [anchor["text"] for anchor in normalized],  # 收集所有锚点的文本列。
-        [anchor["embedding"] for anchor in normalized],  # 收集所有锚点的向量列。
-        [anchor["axis_value"] for anchor in normalized],  # 收集所有锚点的语义轴数值列。
-        [anchor["category"] for anchor in normalized],  # 收集所有锚点的分类列。
+        [anchor.axis_name for anchor in normalized],  # 收集所有锚点的语义轴名称列。
+        [anchor.text for anchor in normalized],  # 收集所有锚点的文本列。
+        [anchor.embedding for anchor in normalized],  # 收集所有锚点的向量列。
+        [anchor.axis_value for anchor in normalized],  # 收集所有锚点的语义轴数值列。
+        [anchor.category for anchor in normalized],  # 收集所有锚点的分类列。
     ]  # 字段列数据组织完成。
     collection.insert(data=entity)  # 将字段列数据批量插入 Milvus 集合。
     collection.flush()  # 刷新集合，确保插入数据持久化可见。
@@ -133,21 +133,21 @@ def search_similar_anchor(request: SearchSimilarAnchorRequest) -> SearchSimilarA
         output_fields=["id", "axis_name", "text", "axis_value", "category"],  # 指定输出字段。
     )  # 搜索调用结束。
 
-    anchors: list[dict[str, Any]] = []  # 存放最终结果。
+    anchors: list[SearchSimilarAnchorResult] = []  # 存放最终结果。
     for hit in search_result[0]:  # 遍历第一组搜索结果。
         similarity = float(hit.score)  # 提取相似度分数。
         if request.min_similarity is not None and similarity < request.min_similarity:  # 如果低于最小分数阈值。
             continue  # 跳过该结果。
         entity = hit.entity  # 获取命中的实体。
-        anchors.append(  # 将结果整理成字典后追加。
-            {
-                "id": entity.get("id"),  # 实体 ID。
-                "axis_name": entity.get("axis_name"),  # 轴名。
-                "text": entity.get("text"),  # 文本。
-                "axis_value": entity.get("axis_value"),  # 轴值。
-                "category": entity.get("category"),  # 类别。
-                "similarity": similarity,  # 相似度。
-            }  # 单条结果字典结束。
+        anchors.append(  # 将结果整理成 Pydantic 对象后追加。
+            SearchSimilarAnchorResult(
+                id=entity.get("id"),  # 实体 ID。
+                axis_name=entity.get("axis_name"),  # 轴名。
+                text=entity.get("text"),  # 文本。
+                axis_value=entity.get("axis_value"),  # 轴值。
+                category=entity.get("category"),  # 类别。
+                similarity=similarity,  # 相似度。
+            )  # 单条结果对象结束。
         )  # 结果追加结束。
 
     logger.info("semantic_anchor.searched top_k=%s returned=%s expr=%s", request.top_k, len(anchors), expr)  # 记录搜索日志。

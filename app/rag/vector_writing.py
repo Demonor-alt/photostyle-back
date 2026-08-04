@@ -10,6 +10,8 @@ from pymilvus import Collection, CollectionSchema, DataType, FieldSchema, utilit
 
 from app.db.history_mapper import get_history_record_by_history_id  # 从数据库获取历史记录
 from app.db.user_mapper import get_user_profile_by_id  # 从数据库获取用户长相
+from app.schemas.dto.semantic_anchor_dto import PhotoStyleEmbeddingPayload  # 引入照片风格向量写入载荷 DTO。
+from app.schemas.orm.history import History  # 历史记录 Pydantic 模型
 from app.rag.embedding import embed_text, get_embedding_dimension, get_embedding_model_name  # 文本向量化功能
 from app.rag.milvus_client import (
     connect_milvus
@@ -30,32 +32,28 @@ def _safe_json_dumps(value: Any) -> str:  # 定义安全的 JSON 序列化函数
     return json.dumps(value, ensure_ascii=False, sort_keys=True, default=str)  # 序列化为 JSON，不转义中文，键排序，无法序列化的值转为字符串
 
 
-def _safe_get(mapping: Any, key: str, default: Any = None) -> Any:  # 定义安全的字典取值函数
-    """只在对象是 dict 时取值，避免历史数据结构异常导致报错。"""
-    if isinstance(mapping, dict):  # 检查对象是否为字典类型
-        return mapping.get(key, default)  # 从字典中获取键值，不存在则返回默认值
-    return default  # 如果不是字典，直接返回默认值
-
-
 def _flatten_simple_analysis(value: Any) -> str:  # 定义将用户长相压平为文本的函数
     """将用户人脸压平成适合向量化的短文本。"""
-    if not isinstance(value, dict):  # 检查输入是否为字典类型
+    if value is None:  # 如果没有用户长相分析
+        return ""  # 返回空字符串
+    analysis = value.model_dump(mode="json", by_alias=True) if hasattr(value, "model_dump") else value  # 转为 JSON 兼容结构
+    if not isinstance(analysis, dict):  # 检查输入是否为字典类型
         return ""  # 不是字典则返回空字符串
     parts: list[str] = []  # 初始化文本片段列表
     # 提取用户长相中的基础维度，作为后续个性化检索的重要语义特征
     for key in ["脸型", "线条感", "五官量感", "面部对比度", "肤色", "肤质", "气质"]:  # 遍历基础维度键名
-        item = value.get(key)  # 获取该维度的值
+        item = analysis.get(key)  # 获取该维度的值
         if item:  # 如果值存在
             parts.append(f"{key}:{item}")  # 将键值对格式化后添加到列表
     # 提取五官细节，帮助模型理解用户适合的妆造、姿势和拍摄角度
     for section in ["眼睛", "眉毛", "鼻子", "嘴巴", "耳朵"]:  # 遍历五官部位
-        section_value = value.get(section)  # 获取该部位的详细信息
+        section_value = analysis.get(section)  # 获取该部位的详细信息
         if isinstance(section_value, dict):  # 检查部位信息是否为字典
             for sub_key, sub_value in section_value.items():  # 遍历部位的子属性
                 if sub_value is not None and sub_value != "":  # 如果子属性值有效
                     parts.append(f"{section}{sub_key}:{sub_value}")  # 将部位子属性格式化后添加到列表
     # 风格向量是结构化偏好分数，转为文本后可以进入同一个语义空间
-    style_vector = value.get("风格向量")  # 获取风格向量字典
+    style_vector = analysis.get("风格向量")  # 获取风格向量字典
     if isinstance(style_vector, dict):  # 检查风格向量是否为字典
         vector_text = ",".join(f"{k}:{v}" for k, v in style_vector.items())  # 将风格向量转为逗号分隔的键值对字符串
         if vector_text:  # 如果风格向量文本不为空
@@ -72,22 +70,32 @@ def _normalize_tags(value: Any) -> list[str]:  # 定义标签规范化函数
     return []  # 其他情况返回空列表
 
 
-def _build_history_text(history: dict, user_profile: dict | None = None) -> str:  # 定义构建历史记录文本的函数
+def _get_history_avg_score(history: History) -> float | None:  # 定义计算历史记录平均分的函数
+    scores = [history.makeup_rating, history.outfit_rating, history.pose_rating]  # 获取三个评分字段
+    valid_scores = [float(score) for score in scores if score is not None]  # 过滤空评分并转为浮点数
+    if not valid_scores:  # 如果没有有效评分
+        return None  # 返回空值
+    return round(sum(valid_scores) / len(valid_scores), 2)  # 返回平均评分
+
+
+def _build_history_text(history: History, user_profile: Any | None = None) -> str:  # 定义构建历史记录文本的函数
     """构建一条历史记录对应的入库文本。"""
-    input_data = history.get("input_data") or {}  # 获取输入数据，不存在则使用空字典
-    output_data = history.get("output_data") or {}  # 获取输出数据，不存在则使用空字典
-    simple_analysis = _safe_get(user_profile, "simple_analysis", {})  # 安全获取用户长相分析数据
-    comment = history.get("feedback_comment") or ""  # 获取反馈评论，不存在则使用空字符串
-    avg_score = history.get("avg_score")  # 获取平均评分
+    input_data = history.input_data  # 获取输入数据
+    output_data = history.output_data  # 获取输出数据
+    simple_analysis = user_profile.simple_analysis  # 获取用户长相分析数据
+    comment = history.feedback_comment or ""  # 获取反馈评论，不存在则使用空字符串
+    avg_score = _get_history_avg_score(history)  # 获取平均评分
+    input_snapshot = input_data.model_dump(mode="json", by_alias=True)  # 将输入数据转为 JSON 兼容结构
+    output_snapshot = output_data.model_dump(mode="json", by_alias=True)  # 将输出数据转为 JSON 兼容结构
     # 同时保留结构化摘要和完整输入/输出快照，让检索既能匹配场景，也能匹配历史推荐内容
     parts = [  # 构建文本片段列表
-        f"风格:{_safe_get(input_data, 'style', '')}",  # 提取风格信息
-        f"时间:{_safe_get(input_data, 'time', '')}",  # 提取时间信息
-        f"地点:{_safe_get(input_data, 'location', '')}",  # 提取地点信息
-        f"天气:{_safe_get(input_data, 'weather', '')}",  # 提取天气信息
-        f"标签:{','.join(_normalize_tags(_safe_get(input_data, 'extra_tags', [])))}",  # 提取并规范化标签
-        f"输入:{_safe_json_dumps(input_data)}",  # 将完整输入数据序列化为 JSON
-        f"输出:{_safe_json_dumps(output_data)}",  # 将完整输出数据序列化为 JSON
+        f"风格:{input_data.style or ''}",  # 提取风格信息
+        f"时间:{input_data.time or ''}",  # 提取时间信息
+        f"地点:{input_data.location or ''}",  # 提取地点信息
+        f"天气:{input_data.weather or ''}",  # 提取天气信息
+        f"标签:{','.join(_normalize_tags(input_data.extra_tags))}",  # 提取并规范化标签
+        f"输入:{_safe_json_dumps(input_snapshot)}",  # 将完整输入数据序列化为 JSON
+        f"输出:{_safe_json_dumps(output_snapshot)}",  # 将完整输出数据序列化为 JSON
         f"平均评分:{avg_score if avg_score is not None else ''}",  # 添加平均评分
         f"点评:{comment}",  # 添加用户点评
         f"用户长相:{_flatten_simple_analysis(simple_analysis)}",  # 添加压平后的用户长相
@@ -95,45 +103,49 @@ def _build_history_text(history: dict, user_profile: dict | None = None) -> str:
     return "\n".join(part for part in parts if part)  # 用换行符连接非空片段并返回
 
 
-def build_photo_style_embedding_payload(history: dict, user_profile: dict | None = None) -> dict:  # 定义构建向量载荷的函数
+def build_photo_style_embedding_payload(history: History, user_profile: Any | None = None) -> PhotoStyleEmbeddingPayload:  # 定义构建向量载荷的函数
     """将历史记录和用户长相转换为可写入 Milvus 的统一载荷。"""
     text = _build_history_text(history, user_profile=user_profile)  # 构建历史记录的文本表示
     logger.debug("历史文本构建完成，文本：%s", text)
     # 文档入库使用原文向量，不添加查询前缀
     embedding = embed_text(text)  # 将文本转换为向量
     logger.info("文本向量化完成，向量维度=%d", len(embedding))
-    input_data = history.get("input_data") or {}  # 获取输入数据
-    output_data = history.get("output_data") or {}  # 获取输出数据
-    tags = _normalize_tags(_safe_get(input_data, "extra_tags", []))  # 规范化标签
-    history_id = int(history["id"])  # 获取历史记录 ID
-    user_id = int(history["user_id"])  # 获取用户 ID
-    avg_score = history.get("avg_score")  # 获取平均评分
+    input_data = history.input_data  # 获取输入数据
+    output_data = history.output_data  # 获取输出数据
+    tags = _normalize_tags(input_data.extra_tags)  # 规范化标签
+    history_id = int(history.id)  # 获取历史记录 ID
+    user_id = int(history.user_id)  # 获取用户 ID
+    avg_score = _get_history_avg_score(history)  # 获取平均评分
+    input_snapshot = input_data.model_dump(mode="json", by_alias=True)  # 将输入数据转为 JSON 兼容结构
+    output_snapshot = output_data.model_dump(mode="json", by_alias=True)  # 将输出数据转为 JSON 兼容结构
+    simple_analysis = user_profile.simple_analysis  # 获取用户长相分析
+    simple_analysis_snapshot = simple_analysis.model_dump(mode="json", by_alias=True) if simple_analysis else {}  # 转为 JSON 兼容结构
     # metadata 保留可过滤字段和完整快照，便于检索、重排序和问题排查
     metadata = {  # 构建元数据字典
         "history_id": history_id,  # 历史记录 ID
         "doc_type": "history_feedback",  # 文档类型标记为历史反馈
-        "time": _safe_get(input_data, "time"),  # 时间信息
-        "style": _safe_get(input_data, "style"),  # 风格信息
-        "weather": _safe_get(input_data, "weather"),  # 天气信息
-        "location": _safe_get(input_data, "location"),  # 地点信息
+        "time": input_data.time,  # 时间信息
+        "style": input_data.style,  # 风格信息
+        "weather": input_data.weather,  # 天气信息
+        "location": input_data.location,  # 地点信息
         "tags": tags,  # 标签列表
         "avg_score": avg_score,  # 平均评分
         "is_positive_feedback": avg_score is not None and float(avg_score) >= 4.0,  # 判断是否为正向反馈（评分>=4.0）
-        "created_at": history.get("created_at") or datetime.utcnow().isoformat(),  # 创建时间，不存在则使用当前时间
+        "created_at": history.created_at or datetime.utcnow().isoformat(),  # 创建时间，不存在则使用当前时间
         "updated_at": datetime.utcnow().isoformat(),  # 更新时间为当前时间
-        "input_data": input_data,  # 完整输入数据快照
-        "output_data": output_data,  # 完整输出数据快照
-        "feedback_comment": history.get("feedback_comment"),  # 用户反馈评论
-        "simple_analysis": _safe_get(user_profile, "simple_analysis", {}),  # 用户长相分析
+        "input_data": input_snapshot,  # 完整输入数据快照
+        "output_data": output_snapshot,  # 完整输出数据快照
+        "feedback_comment": history.feedback_comment,  # 用户反馈评论
+        "simple_analysis": simple_analysis_snapshot,  # 用户长相分析
         "source": "history_feedback",  # 数据来源标记
         "embedding_model": get_embedding_model_name(),  # 使用的向量模型名称
     }
-    return {  # 返回完整的载荷字典
-        "history_id": history_id,  # 历史记录 ID
-        "user_id": user_id,  # 用户 ID
-        "embedding": embedding,  # 向量数据
-        "metadata": metadata,  # 元数据
-    }
+    return PhotoStyleEmbeddingPayload(  # 返回完整的 Pydantic 载荷对象。
+        history_id=history_id,  # 历史记录 ID
+        user_id=user_id,  # 用户 ID
+        embedding=embedding,  # 向量数据
+        metadata=metadata,  # 元数据
+    )
 
 
 def _ensure_collection() -> Collection:
@@ -190,32 +202,32 @@ def _delete_existing_history_embedding(collection: Collection, history_id: int, 
         raise
 
 
-def upsert_photo_style_embedding(history_id: int, user_id: int | None = None) -> dict:
+def upsert_photo_style_embedding(history_id: int, user_id: int | None = None) -> PhotoStyleEmbeddingPayload:
     """为指定历史记录写入或更新向量记忆。"""
     logger.info("开始处理向量写入，history_id=%s user_id=%s", history_id, user_id)
     collection = _ensure_collection()
     history = get_history_record_by_history_id(history_id)
-    resolved_user_id = int(user_id if user_id is not None else history["user_id"])
+    resolved_user_id = int(user_id if user_id is not None else history.user_id)
     logger.debug("解析用户ID完成，resolved_user_id=%s", resolved_user_id)
     user_profile = get_user_profile_by_id(resolved_user_id)
     payload = build_photo_style_embedding_payload(history, user_profile=user_profile)
 
     # 先删旧记录再插入新记录，修正原本 insert-only 导致的重复向量问题。
-    _delete_existing_history_embedding(collection, payload["history_id"], payload["user_id"])
+    _delete_existing_history_embedding(collection, payload.history_id, payload.user_id)
     logger.info("开始插入新向量数据")
     entity = [
-        [payload["history_id"]],
-        [payload["user_id"]],
-        [payload["metadata"]["doc_type"]],
-        [payload["embedding"]],
-        [payload["metadata"]],
+        [payload.history_id],
+        [payload.user_id],
+        [payload.metadata.get("doc_type")],
+        [payload.embedding],
+        [payload.metadata],
     ]
     collection.insert(data=entity)
     collection.flush()
     logger.info(
         "向量写入成功 history_id=%s user_id=%s model=%s",
-        payload["history_id"],
-        payload["user_id"],
-        payload["metadata"]["embedding_model"],
+        payload.history_id,
+        payload.user_id,
+        payload.metadata.get("embedding_model"),
     )
     return payload
