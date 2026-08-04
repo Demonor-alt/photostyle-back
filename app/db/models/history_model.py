@@ -10,7 +10,7 @@ class HistoryModel(Base):
     __tablename__ = "history"
 
     id = Column(Integer, primary_key=True, autoincrement=True, comment="记录ID")
-    user_id = Column(Integer, ForeignKey("photo_style_users.id", ondelete="CASCADE"), nullable=False, index=True, comment="用户ID")
+    user_id = Column(Integer, ForeignKey("user.id", ondelete="CASCADE"), nullable=False, index=True, comment="用户ID")
     input_data = Column(JSON, nullable=False, comment="输入数据")
     output_data = Column(JSON, nullable=False, comment="输出数据")
     makeup_rating = Column(Integer, nullable=False, default=0, comment="妆容评分")

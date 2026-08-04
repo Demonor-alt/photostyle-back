@@ -1,6 +1,7 @@
 """用户模型定义"""
 from datetime import datetime
-from sqlalchemy import Column, BigInteger, String, Text, JSON, DateTime
+from sqlalchemy import Column, BigInteger, String, JSON, DateTime
+from sqlalchemy.orm import relationship
 from app.db.database import Base
 
 
@@ -16,3 +17,10 @@ class UserModel(Base):
     face_analysis = Column(JSON, nullable=True, comment="人脸分析数据")
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, comment="创建时间")
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间")
+
+    persona = relationship(
+        "UserPersonaModel",
+        back_populates="user",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )

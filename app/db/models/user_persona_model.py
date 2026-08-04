@@ -1,7 +1,4 @@
 """用户人格画像模型定义"""
-from typing import Any
-
-
 from datetime import datetime
 
 from sqlalchemy import BigInteger, Column, DateTime, ForeignKey, JSON
@@ -39,7 +36,7 @@ class UserPersonaModel(Base):
     id = Column(BigInteger, primary_key=True, autoincrement=True, comment="用户人格画像ID")
     user_id = Column(
         BigInteger,
-        ForeignKey("photo_style_users.id", ondelete="CASCADE"),
+        ForeignKey("user.id", ondelete="CASCADE"),
         nullable=False,
         unique=True,
         index=True,
@@ -49,4 +46,4 @@ class UserPersonaModel(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, comment="创建时间")
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间")
 
-    user = relationship("User", backref="persona")
+    user = relationship("UserModel", back_populates="persona")
