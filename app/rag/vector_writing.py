@@ -16,7 +16,11 @@ from app.rag.embedding import embed_text, get_embedding_dimension, get_embedding
 from app.rag.milvus_client import (
     connect_milvus
 )  # 复用通用 Milvus 客户端
+from app.schemas.orm.user import SimpleFaceAnalysis  # 引入简化人脸分析模型
 from app.utils.runtime import logger  # 日志记录器
+from app.schemas.orm.user import User  # 引入用户模型
+from app.utils.to_json import to_jsonable  # 引入将Pydantic模型转换为JSON可序列化的格式
+from app.config.constants import IS_POSITIVE_FEEDBACK_SCORE  # 引入正向反馈评分常量
 
 # Milvus collection 名称，默认存放照片风格推荐相关的历史记忆向量
 _COLLECTION_NAME = os.getenv("MILVUS_COLLECTION_NAME")  # 从环境变量读取集合名称
@@ -26,17 +30,11 @@ def get_collection_name() -> str:  # 定义获取集合名称的公开函数
     """返回当前 RAG 使用的 Milvus collection 名称。"""
     return _COLLECTION_NAME  # 返回全局定义的集合名称
 
-
-def _safe_json_dumps(value: Any) -> str:  # 定义安全的 JSON 序列化函数
-    """将任意值稳定地序列化为中文友好的 JSON 字符串。"""
-    return json.dumps(value, ensure_ascii=False, sort_keys=True, default=str)  # 序列化为 JSON，不转义中文，键排序，无法序列化的值转为字符串
-
-
-def _flatten_simple_analysis(value: Any) -> str:  # 定义将用户长相压平为文本的函数
+def _flatten_simple_analysis(value: SimpleFaceAnalysis) -> str:  # 定义将用户长相压平为文本的函数
     """将用户人脸压平成适合向量化的短文本。"""
     if value is None:  # 如果没有用户长相分析
         return ""  # 返回空字符串
-    analysis = value.model_dump(mode="json", by_alias=True) if hasattr(value, "model_dump") else value  # 转为 JSON 兼容结构
+    analysis = to_jsonable(value)  # 转为 JSON 兼容结构
     if not isinstance(analysis, dict):  # 检查输入是否为字典类型
         return ""  # 不是字典则返回空字符串
     parts: list[str] = []  # 初始化文本片段列表
@@ -78,15 +76,13 @@ def _get_history_avg_score(history: History) -> float | None:  # 定义计算历
     return round(sum(valid_scores) / len(valid_scores), 2)  # 返回平均评分
 
 
-def _build_history_text(history: History, user_profile: Any | None = None) -> str:  # 定义构建历史记录文本的函数
+def _build_history_text(history: History, user: User | None = None) -> str:  # 定义构建历史记录文本的函数
     """构建一条历史记录对应的入库文本。"""
     input_data = history.input_data  # 获取输入数据
     output_data = history.output_data  # 获取输出数据
-    simple_analysis = user_profile.simple_analysis  # 获取用户长相分析数据
+    simple_analysis = user.face_analysis.simple_analysis  # 获取用户长相分析数据
     comment = history.feedback_comment or ""  # 获取反馈评论，不存在则使用空字符串
     avg_score = _get_history_avg_score(history)  # 获取平均评分
-    input_snapshot = input_data.model_dump(mode="json", by_alias=True)  # 将输入数据转为 JSON 兼容结构
-    output_snapshot = output_data.model_dump(mode="json", by_alias=True)  # 将输出数据转为 JSON 兼容结构
     # 同时保留结构化摘要和完整输入/输出快照，让检索既能匹配场景，也能匹配历史推荐内容
     parts = [  # 构建文本片段列表
         f"风格:{input_data.style or ''}",  # 提取风格信息
@@ -94,8 +90,8 @@ def _build_history_text(history: History, user_profile: Any | None = None) -> st
         f"地点:{input_data.location or ''}",  # 提取地点信息
         f"天气:{input_data.weather or ''}",  # 提取天气信息
         f"标签:{','.join(_normalize_tags(input_data.extra_tags))}",  # 提取并规范化标签
-        f"输入:{_safe_json_dumps(input_snapshot)}",  # 将完整输入数据序列化为 JSON
-        f"输出:{_safe_json_dumps(output_snapshot)}",  # 将完整输出数据序列化为 JSON
+        f"输入:{to_jsonable(input_data)}",  # 将完整输入数据序列化为 JSON
+        f"输出:{to_jsonable(output_data)}",  # 将完整输出数据序列化为 JSON
         f"平均评分:{avg_score if avg_score is not None else ''}",  # 添加平均评分
         f"点评:{comment}",  # 添加用户点评
         f"用户长相:{_flatten_simple_analysis(simple_analysis)}",  # 添加压平后的用户长相
@@ -103,23 +99,18 @@ def _build_history_text(history: History, user_profile: Any | None = None) -> st
     return "\n".join(part for part in parts if part)  # 用换行符连接非空片段并返回
 
 
-def build_photo_style_embedding_payload(history: History, user_profile: Any | None = None) -> PhotoStyleEmbeddingPayload:  # 定义构建向量载荷的函数
+def build_photo_style_embedding_payload(history: History, user: User | None = None) -> PhotoStyleEmbeddingPayload:  # 定义构建向量载荷的函数
     """将历史记录和用户长相转换为可写入 Milvus 的统一载荷。"""
-    text = _build_history_text(history, user_profile=user_profile)  # 构建历史记录的文本表示
+    text = _build_history_text(history, user=user)  # 构建历史记录的文本表示
     logger.debug("历史文本构建完成，文本：%s", text)
     # 文档入库使用原文向量，不添加查询前缀
     embedding = embed_text(text)  # 将文本转换为向量
     logger.info("文本向量化完成，向量维度=%d", len(embedding))
     input_data = history.input_data  # 获取输入数据
     output_data = history.output_data  # 获取输出数据
-    tags = _normalize_tags(input_data.extra_tags)  # 规范化标签
     history_id = int(history.id)  # 获取历史记录 ID
     user_id = int(history.user_id)  # 获取用户 ID
     avg_score = _get_history_avg_score(history)  # 获取平均评分
-    input_snapshot = input_data.model_dump(mode="json", by_alias=True)  # 将输入数据转为 JSON 兼容结构
-    output_snapshot = output_data.model_dump(mode="json", by_alias=True)  # 将输出数据转为 JSON 兼容结构
-    simple_analysis = user_profile.simple_analysis  # 获取用户长相分析
-    simple_analysis_snapshot = simple_analysis.model_dump(mode="json", by_alias=True) if simple_analysis else {}  # 转为 JSON 兼容结构
     # metadata 保留可过滤字段和完整快照，便于检索、重排序和问题排查
     metadata = {  # 构建元数据字典
         "history_id": history_id,  # 历史记录 ID
@@ -128,15 +119,15 @@ def build_photo_style_embedding_payload(history: History, user_profile: Any | No
         "style": input_data.style,  # 风格信息
         "weather": input_data.weather,  # 天气信息
         "location": input_data.location,  # 地点信息
-        "tags": tags,  # 标签列表
+        "tags": _normalize_tags(input_data.extra_tags),  # 标签列表
         "avg_score": avg_score,  # 平均评分
-        "is_positive_feedback": avg_score is not None and float(avg_score) >= 4.0,  # 判断是否为正向反馈（评分>=4.0）
-        "created_at": history.created_at or datetime.utcnow().isoformat(),  # 创建时间，不存在则使用当前时间
+        "is_positive_feedback": avg_score is not None and float(avg_score) >= IS_POSITIVE_FEEDBACK_SCORE,  # 判断是否为正向反馈（评分>=IS_POSITIVE_FEEDBACK_SCORE）
+        "created_at": history.created_at,  # 创建时间
         "updated_at": datetime.utcnow().isoformat(),  # 更新时间为当前时间
-        "input_data": input_snapshot,  # 完整输入数据快照
-        "output_data": output_snapshot,  # 完整输出数据快照
+        "input_data": to_jsonable(input_data),  # 完整输入数据快照
+        "output_data": to_jsonable(output_data),  # 完整输出数据快照
         "feedback_comment": history.feedback_comment,  # 用户反馈评论
-        "simple_analysis": simple_analysis_snapshot,  # 用户长相分析
+        "simple_analysis": to_jsonable(user.face_analysis.simple_analysis ),  # 用户长相分析
         "source": "history_feedback",  # 数据来源标记
         "embedding_model": get_embedding_model_name(),  # 使用的向量模型名称
     }
