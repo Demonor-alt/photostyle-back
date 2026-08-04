@@ -10,9 +10,7 @@ CREATE TABLE IF NOT EXISTS `user` (
     `face_analysis` JSON NULL COMMENT '人脸分析数据',
     `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_photo_style_users_username` (`username`),
-    KEY `idx_photo_style_users_username` (`username`)
+    PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户表';
 
 CREATE TABLE IF NOT EXISTS `history` (
@@ -27,9 +25,9 @@ CREATE TABLE IF NOT EXISTS `history` (
     `reviewed` BOOLEAN NOT NULL DEFAULT FALSE COMMENT '是否已点评',
     `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     PRIMARY KEY (`id`),
-    KEY `idx_photo_style_history_user_id` (`user_id`),
-    CONSTRAINT `fk_photo_style_history_user_id`
-        FOREIGN KEY (`user_id`) REFERENCES `photo_style_users` (`id`)
+    KEY `idx_history_user_id` (`user_id`),
+    CONSTRAINT `fk_history_user_id`
+        FOREIGN KEY (`user_id`) REFERENCES `user` (`id`)
         ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='拍照风格历史记录表';
 
@@ -41,8 +39,7 @@ CREATE TABLE IF NOT EXISTS `user_persona` (
     `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_user_persona_user_id` (`user_id`),
-    KEY `idx_user_persona_user_id` (`user_id`),
     CONSTRAINT `fk_user_persona_user_id`
-        FOREIGN KEY (`user_id`) REFERENCES `photo_style_users` (`id`)
+        FOREIGN KEY (`user_id`) REFERENCES `user` (`id`)
         ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户人格画像表';
