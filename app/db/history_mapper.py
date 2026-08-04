@@ -36,8 +36,13 @@ def save_history_record(record: HistoryRecord | HistoryUserRecord) -> History:
     """保存历史记录并返回新增记录"""
     db = SessionLocal()
     try:
-        if record.created_at is None:
-            record.created_at = datetime.now()
+        created_at = getattr(record, "created_at", None)
+        if created_at is None:
+            created_at = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+        elif isinstance(created_at, str):
+            created_at = datetime.datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+            if created_at.tzinfo is not None:
+                created_at = created_at.astimezone(datetime.timezone.utc).replace(tzinfo=None)
         history = HistoryModel(
             user_id=record.user_id,
             input_data=to_jsonable(record.input_data),
@@ -47,7 +52,7 @@ def save_history_record(record: HistoryRecord | HistoryUserRecord) -> History:
             pose_rating=record.pose_rating,
             feedback_comment=record.feedback_comment,
             reviewed=record.reviewed,
-            created_at=record.created_at,
+            created_at=created_at,
         )
         db.add(history)
         db.commit()

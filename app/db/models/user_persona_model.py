@@ -5,6 +5,7 @@ from sqlalchemy import BigInteger, Column, DateTime, ForeignKey, JSON
 from sqlalchemy.orm import relationship
 
 from app.db.database import Base
+from app.db.models.user_model import UserModel
 
 
 DEFAULT_SEMANTIC_AXES = {
@@ -46,4 +47,4 @@ class UserPersonaModel(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, comment="创建时间")
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间")
 
-    user = relationship("UserModel", back_populates="persona")
+    user = relationship(UserModel, back_populates="persona")

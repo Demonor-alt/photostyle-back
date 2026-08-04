@@ -3,6 +3,7 @@ from __future__ import annotations  # 启用前向引用类型注解。
 from typing import Any  # 用于表示任意类型。
 
 from app.schemas.dto.semantic_anchor_dto import (
+    SearchSimilarAnchorRequest,
     SearchSimilarAnchorResult,
     SearchSimilarAnchorResponse,
     SemanticAnchorAxisCandidate,
@@ -35,7 +36,7 @@ _SCORE_FIELDS = ("makeup_rating", "outfit_rating", "pose_rating")  # 定义可�
 
 def _search_semantic_anchors(comment: str, top_k: int) -> SearchSimilarAnchorResponse:  # 根据评论检索语义锚点。
     """使用评论文本向量检索全局 Semantic Anchor Library。"""  # 说明调用向量检索。
-    anchors = search_similar_anchor(query_text=comment, top_k=top_k)  # 执行相似锚点搜索。
+    anchors = search_similar_anchor(SearchSimilarAnchorRequest(query_text=comment, top_k=top_k))  # 执行相似锚点搜索。
     normalized: list[SearchSimilarAnchorResult] = []  # 初始化标准化锚点列表。
     for anchor in anchors:  # 遍历召回锚点。
         normalized.append(

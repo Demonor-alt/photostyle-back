@@ -1,7 +1,6 @@
 """Milvus 向量写入与文本构建服务。"""
 from __future__ import annotations  # 启用注解的延迟求值，支持前向引用
 
-import json  # JSON 序列化和反序列化
 import os  # 操作系统环境变量和路径操作
 from datetime import datetime  # 日期时间处理
 from typing import Any  # 类型提示支持
@@ -76,11 +75,11 @@ def _get_history_avg_score(history: History) -> float | None:  # 定义计算历
     return round(sum(valid_scores) / len(valid_scores), 2)  # 返回平均评分
 
 
-def _build_history_text(history: History, user: User | None = None) -> str:  # 定义构建历史记录文本的函数
+def _build_history_text(history: History, user_profile: User | None = None) -> str:  # 定义构建历史记录文本的函数
     """构建一条历史记录对应的入库文本。"""
     input_data = history.input_data  # 获取输入数据
     output_data = history.output_data  # 获取输出数据
-    simple_analysis = user.face_analysis.simple_analysis  # 获取用户长相分析数据
+    simple_analysis = user_profile.face_analysis.simple_analysis  # 获取用户长相分析数据
     comment = history.feedback_comment or ""  # 获取反馈评论，不存在则使用空字符串
     avg_score = _get_history_avg_score(history)  # 获取平均评分
     # 同时保留结构化摘要和完整输入/输出快照，让检索既能匹配场景，也能匹配历史推荐内容
@@ -99,9 +98,9 @@ def _build_history_text(history: History, user: User | None = None) -> str:  # �
     return "\n".join(part for part in parts if part)  # 用换行符连接非空片段并返回
 
 
-def build_photo_style_embedding_payload(history: History, user: User | None = None) -> PhotoStyleEmbeddingPayload:  # 定义构建向量载荷的函数
+def build_photo_style_embedding_payload(history: History, user_profile: User | None = None) -> PhotoStyleEmbeddingPayload:  # 定义构建向量载荷的函数
     """将历史记录和用户长相转换为可写入 Milvus 的统一载荷。"""
-    text = _build_history_text(history, user=user)  # 构建历史记录的文本表示
+    text = _build_history_text(history, user_profile=user_profile)  # 构建历史记录的文本表示
     logger.debug("历史文本构建完成，文本：%s", text)
     # 文档入库使用原文向量，不添加查询前缀
     embedding = embed_text(text)  # 将文本转换为向量
@@ -127,7 +126,7 @@ def build_photo_style_embedding_payload(history: History, user: User | None = No
         "input_data": to_jsonable(input_data),  # 完整输入数据快照
         "output_data": to_jsonable(output_data),  # 完整输出数据快照
         "feedback_comment": history.feedback_comment,  # 用户反馈评论
-        "simple_analysis": to_jsonable(user.face_analysis.simple_analysis ),  # 用户长相分析
+        "simple_analysis": to_jsonable(user_profile.face_analysis.simple_analysis ),  # 用户长相分析
         "source": "history_feedback",  # 数据来源标记
         "embedding_model": get_embedding_model_name(),  # 使用的向量模型名称
     }
