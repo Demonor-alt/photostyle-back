@@ -166,9 +166,6 @@ docker run -d \
 
 ```
 
-RabbitMQ 管理后台：`http://localhost:15672`。
-
-
 #### 启动 Milvus Standalone
 
 ```bash
@@ -279,8 +276,6 @@ docker run -d \
 
 ```
 
-Attu 地址：`http://localhost:3000`。
-
 ### 5. 启动服务
 
 启动 API 服务：
@@ -302,105 +297,95 @@ python -m app.rabbitmq.feedback_worker
 ## 项目结构
 
 ```text
-
 back/
-
 ├── app/
-
 │   ├── agents/                    # AI Agent 模块
-
-│   │   ├── evaluation_agent.py     # 评估 Agent
-
-│   │   └── rag_agent.py            # RAG 检索 Agent
-
+│   │   ├── base_agent.py
+│   │   ├── critic_agent.py
+│   │   ├── evaluation_agent.py
+│   │   ├── fusion_agent.py
+│   │   ├── generator_agent.py
+│   │   ├── memory_agent.py
+│   │   ├── planner_agent.py
+│   │   └── search_agent.py
 │   ├── api/                       # API 路由
-
+│   │   ├── history_controller.py
+│   │   ├── user_controller.py
+│   │   └── utils.py
+│   ├── config/                    # 全局配置
+│   │   ├── constants.py
+│   │   └── enums/
 │   ├── db/                        # 数据库层
-
-│   │   ├── database.py             # 数据库连接和会话
-
-│   │   ├── user_service.py         # 用户服务
-
-│   │   └── history_service.py      # 历史服务
-
+│   │   ├── database.py
+│   │   ├── history_mapper.py
+│   │   ├── user_mapper.py
+│   │   ├── user_persona_mapper.py
+│   │   └── models/
+│   │       ├── history_model.py
+│   │       ├── user_model.py
+│   │       └── user_persona_model.py
 │   ├── graph/                     # LangGraph 流程编排
-
-│   ├── models/                    # ORM 模型
-
-│   │   ├── user.py                 # 用户模型
-
-│   │   └── history.py              # 历史记录模型
-
+│   │   ├── state.py
+│   │   └── workflow.py
 │   ├── rabbitmq/                  # RabbitMQ 异步任务
-
-│   │   ├── feedback_tasks.py       # 反馈任务发布、消费和处理
-
-│   │   └── feedback_worker.py      # 反馈 worker 入口
-
+│   │   ├── feedback_rag_consumer.py
+│   │   ├── feedback_tasks.py
+│   │   ├── feedback_user_profile_consumer.py
+│   │   └── feedback_worker.py
 │   ├── rag/                       # RAG 检索与向量记忆模块
-
-│   │   ├── embedding/              # Embedding 模型封装
-
-│   │   ├── vector_search.py        # Milvus 向量检索
-
-│   │   └── vector_writing.py       # Milvus 向量写入
-
+│   │   ├── embedding/
+│   │   ├── milvus_client.py
+│   │   ├── semantic_anchor_milvus_service.py
+│   │   ├── vector_search.py
+│   │   └── vector_writing.py
+│   ├── schemas/                   # DTO / ORM / VO / LLM 入参出参
+│   │   ├── dto/
+│   │   ├── error.py
+│   │   ├── llm.py
+│   │   ├── orm/
+│   │   └── vo/
 │   ├── services/                  # 业务服务
-
+│   │   ├── llm/
+│   │   │   ├── qwen_client.py
+│   │   │   ├── qwen_face_client.py
+│   │   │   ├── qwen_suggest_client.py
+│   │   │   └── qwen_user_persona_analysis_client.py
+│   │   ├── orchestrator.py
+│   │   └── user_persona_service.py
 │   ├── utils/                     # 工具模块
-
+│   │   ├── runtime.py
+│   │   ├── semantic_anchors.py
+│   │   └── to_json.py
 │   └── main.py                    # FastAPI 应用入口
-
 ├── logs/                          # 日志目录
-
 ├── uploads/                       # 上传文件目录
-
 ├── migrate_to_orm.py              # 数据库迁移脚本
-
 ├── .env.example                   # 环境变量示例
-
 ├── requirements.txt               # Python 依赖
-
 └── README.md                      # 本文件
-
 ```
 
 ## 关键环境变量
 
 | 变量名 | 默认值 | 说明 |
-
 | --- | --- | --- |
-
 | `DASHSCOPE_API_KEY` | 无 | 通义千问 DashScope API Key |
-
 | `DATABASE_URL` | 无 | 数据库连接地址 |
-
 | `MILVUS_URI` | `http://localhost:19530` | Milvus 连接地址 |
-
 | `MILVUS_TOKEN` | 空 | Milvus 认证 token，本地无认证可不填 |
-
 | `MILVUS_COLLECTION_NAME` | `photo_style_embeddings` | RAG 使用的 collection 名称 |
-
 | `MILVUS_ALIAS` | `default` | pymilvus 连接别名 |
-
 | `EMBEDDING_MODEL_NAME` | `BAAI/bge-base-zh-v1.5` | sentence-transformers 模型名或本地模型路径 |
-
 | `EMBEDDING_DEVICE` | 自动选择 | embedding 运行设备，如 `cpu`、`cuda`、`cuda:0` |
-
 | `BGE_QUERY_PREFIX` | `为这个句子生成表示以用于检索相关文章：` | BGE 查询侧前缀，可置空 |
-
 | `RABBITMQ_URL` | 无 | RabbitMQ AMQP 连接地址 |
-
-| `RABBITMQ_FEEDBACK_QUEUE` | 无 | 反馈更新任务队列名 |
-
+| `RABBITMQ_REVIEW_SUBMITTED_EXCHANGE` | 无 | 点评提交事件交换机名 |
+| `RABBITMQ_REVIEW_SUBMITTED_ROUTING_KEY` | 无 | 点评提交事件路由键 |
+| `RABBITMQ_FEEDBACK_RAG_QUEUE` | 无 | RAG 向量写入队列名 |
+| `RABBITMQ_FEEDBACK_USER_PROFILE_QUEUE` | 无 | 用户画像更新队列名 |
 | `RABBITMQ_HEARTBEAT` | `600` | RabbitMQ 心跳间隔，适配较长耗时的向量写入 |
-
 | `RABBITMQ_BLOCKED_TIMEOUT` | `300` | RabbitMQ 阻塞连接超时时间 |
-
 | `DEBUG` | `false` | 是否启用调试输出 |
-
 | `LOG_LEVEL` | `INFO` | 日志级别 |
-
 | `LOG_KEEP_DAYS` | `3` | 日志文件保留天数 |
-
 | `LOG_MAX_BYTES` | `10485760` | 单个日志文件最大大小 |
