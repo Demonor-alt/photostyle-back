@@ -20,7 +20,7 @@ def handle_review_submitted_for_rag(history_id: int) -> None:  # 定义 RAG 事�
     current_history = get_history_record_by_history_id(history_id)  # 根据历史记录 ID 查询当前历史记录。
     user_id = int(current_history.user_id)  # 从历史记录中读取用户 ID 并转为整数。
     embedding_payload = upsert_photo_style_embedding(history_id, user_id)  # 将当前点评相关内容写入或更新到向量库。
-    logger.info("feedback.rag.embedding.saved history_id=%s metadata=%s", history_id, embedding_payload["metadata"])  # 记录 RAG 写入成功日志。
+    logger.info("feedback.rag.embedding.saved history_id=%s metadata=%s", history_id, embedding_payload.metadata)  # 读取 Pydantic 载荷属性并记录 RAG 写入成功日志。
 
 
 def consume_feedback_rag_tasks() -> None:  # 定义 RAG 消费者启动函数，用于持续监听 RAG 队列。

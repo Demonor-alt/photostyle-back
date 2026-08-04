@@ -30,6 +30,7 @@ from app.config.constants import (
 )
 from app.utils.semantic_anchors import clamp, load_semantic_axes_config
 from app.schemas.orm.history import History  # 引入历史记录模型。
+from app.schemas.dto.user_persona_dto import UpsertUserPersonaRequest  # 引入用户画像更新请求 DTO。
 
 _SCORE_FIELDS = ("makeup_rating", "outfit_rating", "pose_rating")  # 定义可影响语义轴更新幅度的评分字段。
 
@@ -175,8 +176,10 @@ def user_persona_semantic_axes( history_id: int
     )  # 得到可直接入库的 semantic_axes 字典。
     normalized.axis_updates = [item.model_copy(update={"value": semantic_axes[item.axis_name]}) for item in normalized.axis_updates if item.axis_name in semantic_axes]  # 同步 Pydantic 分析结果中的最终融合值。
     update_user_persona_by_id(  # 更新或创建用户画像数据库记录。
-        user_id=user_id,  # 指定要更新的用户 ID。
-        semantic_axes=semantic_axes,  # 写入轴名和值组成的最新语义轴画像。
+        UpsertUserPersonaRequest(  # 构造 mapper 所需的用户画像更新请求对象。
+            user_id=user_id,  # 指定要更新的用户 ID。
+            semantic_axes=semantic_axes,  # 写入轴名和值组成的最新语义轴画像。
+        )  # 用户画像更新请求对象构造结束。
     )  # 获取更新后的用户画像。
     result = {  # 组装最终结果。
         "user_id": user_id,  # 用户 ID。
